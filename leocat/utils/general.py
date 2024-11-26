@@ -5,6 +5,16 @@ from leocat.utils.const import *
 from leocat.utils.time import ymdhms_to_val, date_to_jd
 from leocat.utils.index import overlap
 
+
+def format_as_array(vec):
+	if isinstance(vec, np.ndarray):
+		return vec
+	elif isinstance(vec, (int, float)):
+		return np.array([vec])
+	elif isinstance(vec, (list, tuple)):
+		return np.array(vec)
+
+		
 def search_leocat(search_string, verbose=1, directory=MAIN_DIR):
 
 	def find_string_in_file(file_path, search_string):
