@@ -405,11 +405,13 @@ def get_coastline(COASTLINE_DIR=None, lon_bounds=[], lat_bounds=[]):
 	try:
 		import shapefile
 	except ImportError:
-		return np.array([]), np.array([])
+		raise ModuleNotFoundError('get_coastline requires shapely (pip install pyshp)')
+		# return np.array([]), np.array([])
 		
 	# from leocat.utils.const import COASTLINE_DIR
 	if COASTLINE_DIR is None:
-		return np.array([]), np.array([])
+		raise Exception('lon/lat coastline data directory not specified')
+		# return np.array([]), np.array([])
 
 	lon_coast = []
 	lat_coast = []
