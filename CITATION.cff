@@ -1,0 +1,21 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Low Earth Orbit Coverage Analysis Tool
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Jonathan Sipps
+    email: john.sipps@utexas.edu
+    affiliation: The University of Texas at Austin
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.14219835
+    description: 'https://github.com/jsipps26/LEOCAT'
+repository-code: 'https://github.com/jsipps26/LEOCAT'
+license: BSD-3-Clause
+version: v0.1.0-pre-release
+date-released: '2024-11-25'
