@@ -1,5 +1,6 @@
 
 import numpy as np
+from leocat.utils.const import *
 from leocat.utils.orbit import Orbit, MLST_to_LAN, get_LAN_dot, convert_ECI_ECF
 from leocat.utils.geodesy import ecf_to_lla
 

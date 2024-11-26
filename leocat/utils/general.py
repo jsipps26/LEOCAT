@@ -5,14 +5,17 @@ from leocat.utils.const import *
 from leocat.utils.time import ymdhms_to_val, date_to_jd
 from leocat.utils.index import overlap
 
-def search_tempo(search_string, verbose=1, directory=MAIN_DIR):
+def search_leocat(search_string, verbose=1, directory=MAIN_DIR):
 
 	def find_string_in_file(file_path, search_string):
 		"""Check if the search string is in the file."""
 		with open(file_path, 'r') as file:
 			for line_no, line in enumerate(file, start=1):
 				if search_string in line:
-					print(f"Found in {os.path.basename(file_path)} at line {line_no}")
+					file_path_last = os.path.join(*file_path.split(os.sep)[-2:-1])
+					file_path_base = os.path.basename(file_path)
+					print(f"Found in {os.path.join(file_path_last, file_path_base)} at line {line_no}")
+					# print(f"Found in {os.path.basename(file_path)} at line {line_no}")
 					if verbose > 1:
 						print('  ', line)
 					# print(f"Found in {file_path} at line {line_no}")

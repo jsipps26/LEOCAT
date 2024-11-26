@@ -3,7 +3,7 @@
 import numpy as np
 from leocat.utils.const import *
 from leocat.utils.cov import get_access_interval, get_t_access_avg, swath_to_FOV
-from leocat.cov import get_num_obs, get_revisit
+from leocat.utils.cov import get_num_obs, get_revisit
 from pyproj import CRS, Transformer
 
 from leocat.utils.geodesy import lla_to_ecf, RADEC_to_cart, DiscreteGlobalGrid

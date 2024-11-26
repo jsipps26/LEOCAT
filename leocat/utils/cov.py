@@ -13,6 +13,32 @@ from leocat.utils.geodesy import ev_direct, ev_inverse
 from numba import njit
 
 
+def get_revisit(t_access_avg, num_pts, revisit_type='avg'):
+	revisit = np.full(num_pts,np.nan)
+	for key in t_access_avg:
+		t_access = t_access_avg[key]
+		if len(t_access) < 2:
+			continue
+
+		# revisit exists
+		if revisit_type == 'avg':
+			revisit[key] = np.mean(np.diff(t_access))
+		elif revisit_type == 'max':
+			revisit[key] = np.max(np.diff(t_access))
+		elif revisit_type == 'min':
+			revisit[key] = np.min(np.diff(t_access))
+		elif revisit_type == 'count':
+			revisit[key] = len(np.diff(t_access))
+
+	return revisit
+	
+def get_num_obs(t_access_avg, num_pts):
+	num_obs = np.zeros(num_pts)
+	for key in t_access_avg:
+		num_obs[key] = num_obs[key] + len(t_access_avg[key])
+	return num_obs
+
+	
 @njit
 def get_dt_avg_MC_numba(t, q, N_MC):
 	dt_avg_MC = 0.0
@@ -203,8 +229,7 @@ def get_t_access_avg(t, access_interval):
 	return t_access_avg
 
 
-# def FOV_from_w_new(w, alt, radians=True):
-def swath_to_FOV(w, alt, radians=True):
+def swath_to_FOV(w, alt, radians=False):
 
 	# stupid approach
 	# here's a better one
@@ -246,7 +271,7 @@ def swath_to_FOV(w, alt, radians=True):
 
 
 # def w_from_FOV_new(FOV, alt, radians=True, debug=0):
-def FOV_to_swath(FOV, alt, radians=True, debug=0):
+def FOV_to_swath(FOV, alt, radians=False, debug=0):
 
 	# [208]
 	# h = alt

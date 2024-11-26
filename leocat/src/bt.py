@@ -32,7 +32,7 @@ class AnalyticCoverage:
 		self.JD1 = JD1
 		self.JD2 = JD2
 
-	def get_access(self, verbose=0, GL=None, accuracy=2):
+	def get_access(self, verbose=1, GL=None, accuracy=2):
 		orb = self.orb
 		swath = self.swath
 		lon, lat = self.lon, self.lat

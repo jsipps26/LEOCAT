@@ -1,37 +1,14 @@
 
 import numpy as np
 
+from leocat.utils.const import *
 from leocat.src.simple_cov import SimpleCoverage
 from leocat.src.bt import AnalyticCoverage
 from leocat.src.ssc import SmallSwathCoverage
 from leocat.src.swath import SwathEnvelope
 # from leocat.src.fpt import Satellite, Instrument # WIP
 
-
-def get_revisit(t_access_avg, num_pts, revisit_type='avg'):
-	revisit = np.full(num_pts,np.nan)
-	for key in t_access_avg:
-		t_access = t_access_avg[key]
-		if len(t_access) < 2:
-			continue
-
-		# revisit exists
-		if revisit_type == 'avg':
-			revisit[key] = np.mean(np.diff(t_access))
-		elif revisit_type == 'max':
-			revisit[key] = np.max(np.diff(t_access))
-		elif revisit_type == 'min':
-			revisit[key] = np.min(np.diff(t_access))
-		elif revisit_type == 'count':
-			revisit[key] = len(np.diff(t_access))
-
-	return revisit
-	
-def get_num_obs(t_access_avg, num_pts):
-	num_obs = np.zeros(num_pts)
-	for key in t_access_avg:
-		num_obs[key] = num_obs[key] + len(t_access_avg[key])
-	return num_obs
+from leocat.utils.cov import get_num_obs, get_revisit
 
 
 def vector_to_t_access(t_total, index):
@@ -115,6 +92,7 @@ def get_coverage(orb, swath, JD1, JD2, verbose=2, res=None, alpha=0.25): #, lon=
 		# If less duplicate area covered than A_earth,
 		# find lon/lats directly
 		from leocat.src.swath import Instrument, SwathEnvelope
+		from leocat.utils.cov import swath_to_FOV
 		if verbose > 1:
 			print('preprocessing lon/lats..')
 		FOV_CT = swath_to_FOV(swath, alt=orb.get_alt(), radians=False)
