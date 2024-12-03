@@ -17,7 +17,7 @@ class GeoLayers():
 		self.quality_function = quality_function
 		self.prob = prob
 
-	def get_quality(self, x, y, JD, *layers):
+	def get_quality(self, x, y, JD): #, *layers):
 		layers = self.layer_list
 		return self.quality_function(x, y, JD, *layers)
 
