@@ -8,6 +8,14 @@ from leocat.utils.math import rad, wrap
 from leocat.utils.index import hash_cr_DGG
 from leocat.cov import t_access_to_vector, vector_to_t_access
 
+"""
+To do
+Shifts cause error in swath of ~res/2
+If approx=1 (from cst), could compute coverage for swath+res/2,
+apply shifts, then trim analytically via
+	cos(phi)*cos(Lam) = cos(u)*cos(dpsi)
+
+"""
 
 def shift_MLST(lon, lat, MLST_shift, DGG=None, orb=None):
 	"""
@@ -41,14 +49,16 @@ def shift_LAN_orbit(LAN_shift, orb):
 		LTDN = metadata['LTDN']
 		JD_MLST = metadata['JD']
 		direction = metadata['direction']
-		if direction == 'ascending':
-			# JD is for AN
-			LTAN_new = LAN_to_MLST(LAN_new, JD_MLST)
-			LTDN_new = LAN_to_MLST(LAN_new + np.pi, JD_MLST)
-		elif direction == 'descending':
-			# JD is for DN
-			LTAN_new = LAN_to_MLST(LAN_new + np.pi, JD_MLST)
-			LTDN_new = LAN_to_MLST(LAN_new, JD_MLST)
+		LTAN_new = LAN_to_MLST(LAN_new, JD_MLST)
+		LTDN_new = LAN_to_MLST(LAN_new + np.pi, JD_MLST)
+		# if direction == 'ascending':
+		# 	# JD is for AN
+		# 	LTAN_new = LAN_to_MLST(LAN_new, JD_MLST)
+		# 	LTDN_new = LAN_to_MLST(LAN_new + np.pi, JD_MLST)
+		# elif direction == 'descending':
+		# 	# JD is for DN
+		# 	LTAN_new = LAN_to_MLST(LAN_new + np.pi, JD_MLST)
+		# 	LTDN_new = LAN_to_MLST(LAN_new, JD_MLST)
 
 		# LTAN = metadata['LTAN']
 		# JD_AN = metadata['JD_AN']
