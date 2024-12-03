@@ -19,7 +19,7 @@ class ConstellationShell:
 		self.LAN_shifts = LAN_shifts
 		self.nu_shifts = nu_shifts
 
-	def get_access(self, verbose=2, approx=True, res=None, alpha=0.25):
+	def get_access(self, verbose=2, approx=True, res=None, alpha=0.25, lon=None, lat=None):
 
 		JD1, JD2 = self.JD1, self.JD2
 		orb = self.orb
@@ -38,7 +38,9 @@ class ConstellationShell:
 			JD2_buffer = JD2 + Tn/86400
 			orb_buf = deepcopy(orb)
 			orb_buf.propagate_epoch((JD1_buffer-JD1)*86400, reset_epoch=True)
-			lon, lat, t_access_buf = get_coverage(orb_buf, swath, JD1_buffer, JD2_buffer, res=res, verbose=verbose)
+			lon, lat, t_access_buf = get_coverage(orb_buf, swath, JD1_buffer, JD2_buffer, \
+												res=res, verbose=verbose, lon=lon, lat=lat)
+			#
 
 			t1_epoch = (JD1-JD1_buffer)*86400
 			t2_epoch = (JD2-JD1_buffer)*86400
@@ -56,7 +58,9 @@ class ConstellationShell:
 
 		else:
 			# run true simulations for each constellation member
-			lon, lat, t_access = get_coverage(orb, swath, JD1, JD2, res=res, verbose=verbose)
+			lon, lat, t_access = get_coverage(orb, swath, JD1, JD2, \
+											res=res, verbose=verbose, lon=lon, lat=lat)
+			#
 			CST[0] = {'lon': lon, 'lat': lat, 't_access': t_access, 'orb': orb}
 			for i in range(len(LAN_shifts)):
 				LAN_shift = LAN_shifts[i]
@@ -68,7 +72,7 @@ class ConstellationShell:
 					# shift_LAN_orbit compensates for changes in MLST, if any
 					orb_cst = shift_LAN_orbit(LAN_shift, orb_cst)
 
-				lon_cst, lat_cst, t_access_cst = get_coverage(orb_cst, swath, JD1, JD2, res=res, verbose=verbose)
+				lon_cst, lat_cst, t_access_cst = get_coverage(orb_cst, swath, JD1, JD2, res=res, verbose=verbose, lon=lon, lat=lat)
 				CST[i+1] = {'lon': lon_cst, 'lat': lat_cst, 't_access': t_access_cst, 'orb': orb_cst}
 
 
