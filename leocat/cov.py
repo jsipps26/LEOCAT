@@ -6,7 +6,7 @@ from leocat.src.simple_cov import SimpleCoverage
 from leocat.src.bt import AnalyticCoverage
 from leocat.src.ssc import SmallSwathCoverage
 from leocat.src.swath import SwathEnvelope
-# from leocat.src.fpt import Satellite, Instrument # WIP
+from leocat.src.fpt import Satellite, Instrument # WIP
 
 from leocat.utils.cov import get_num_obs, get_revisit
 
@@ -70,7 +70,7 @@ def combine_coverage(lons, lats, t_access_list, DGG):
 	return lon_total, lat_total, t_access_total
 
 
-def get_coverage(orb, swath, JD1, JD2, verbose=2, res=None, alpha=0.25): #, lon=None, lat=None):
+def get_coverage(orb, swath, JD1, JD2, verbose=2, res=None, alpha=0.25, lon=None, lat=None):
 
 	from leocat.src.bt import AnalyticCoverage
 
@@ -84,35 +84,35 @@ def get_coverage(orb, swath, JD1, JD2, verbose=2, res=None, alpha=0.25): #, lon=
 	area_cov = num_revs * swath * C
 	A_earth = 4*np.pi*R_earth**2
 
-	# lonlat_exists = False
-	# if not (lon is None) and not (lat is None):
-	# 	lonlat_exists = True
+	lonlat_exists = False
+	if not (lon is None) and not (lat is None):
+		lonlat_exists = True
 
-	if area_cov < A_earth:
-		# If less duplicate area covered than A_earth,
-		# find lon/lats directly
-		from leocat.src.swath import Instrument, SwathEnvelope
-		from leocat.utils.cov import swath_to_FOV
-		if verbose > 1:
-			print('preprocessing lon/lats..')
-		FOV_CT = swath_to_FOV(swath, alt=orb.get_alt(), radians=False)
-		Inst = Instrument(FOV_CT)
-		SE = SwathEnvelope(orb, Inst, res, JD1, JD2)
-		lon, lat = SE.get_lonlat()
+	if not lonlat_exists:
+		if area_cov < A_earth:
+			# If less duplicate area covered than A_earth,
+			# find lon/lats directly
+			from leocat.src.swath import Instrument, SwathEnvelope
+			from leocat.utils.cov import swath_to_FOV
+			if verbose > 1:
+				print('preprocessing lon/lats..')
+			FOV_CT = swath_to_FOV(swath, alt=orb.get_alt(), radians=False)
+			Inst = Instrument(FOV_CT)
+			SE = SwathEnvelope(orb, Inst, res, JD1, JD2)
+			lon, lat = SE.get_lonlat()
 
-	else:
-		from leocat.utils.geodesy import DiscreteGlobalGrid
-		# if more, use global grid
-		if verbose > 1:
-			print('using global lon/lats..')
-		DGG = DiscreteGlobalGrid(A=res**2)
-		lon, lat = DGG.get_lonlat()
+		else:
+			from leocat.utils.geodesy import DiscreteGlobalGrid
+			# if more, use global grid
+			if verbose > 1:
+				print('using global lon/lats..')
+			DGG = DiscreteGlobalGrid(A=res**2)
+			lon, lat = DGG.get_lonlat()
 
 	# spherical lat for AC
 	phi = np.radians(lat)
 	phi_c = np.arctan((R_earth_pole/R_earth)**2 * np.tan(phi))
 	lat_c = np.degrees(phi_c)
-
 	AC = AnalyticCoverage(orb, swath, lon, lat_c, JD1, JD2)
 	t_access = AC.get_access(verbose=verbose, accuracy=2)
 
