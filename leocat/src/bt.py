@@ -155,7 +155,7 @@ def BT_coverage(t_access_init_total, index_total, orb, lon, lat, JD1, JD2, accur
 	if GL is None:
 		GL_flag = 0
 
-	if accuracy == 1:
+	if accuracy >= 1:
 		dt_sc = 60.0
 		num = int((JD2-JD1)*86400/dt_sc) + 1
 		t_space = np.linspace(0,(JD2-JD1)*86400,num)
