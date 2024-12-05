@@ -38,7 +38,7 @@ class ConstellationShell:
 			JD2_buffer = JD2 + Tn/86400
 			orb_buf = deepcopy(orb)
 			orb_buf.propagate_epoch((JD1_buffer-JD1)*86400, reset_epoch=True)
-			lon, lat, t_access_buf = get_coverage(orb_buf, swath, JD1_buffer, JD2_buffer, \
+			lon_buf, lat_buf, t_access_buf = get_coverage(orb_buf, swath, JD1_buffer, JD2_buffer, \
 												res=res, verbose=verbose, lon=lon, lat=lat)
 			#
 
@@ -46,22 +46,28 @@ class ConstellationShell:
 			t2_epoch = (JD2-JD1_buffer)*86400
 			t_access = trim_time(t_access_buf, t1_epoch, t2_epoch, time_shift=-t1_epoch)
 
-			CST[0] = {'lon': lon, 'lat': lat, 't_access': t_access, 'orb': orb}
+			CST[0] = {'lon': lon_buf, 'lat': lat_buf, 't_access': t_access, \
+						'orb': orb, 'LAN_shift': 0.0, 'nu_shift': 0.0}
+			#
 			for i in range(len(LAN_shifts)):
 				LAN_shift = LAN_shifts[i]
 				nu_shift = nu_shifts[i]
 				lon_cst, lat_cst, t_access_cst, orb_cst = \
-					shift_nu(nu_shift, lon, lat, t_access_buf, orb, JD1, JD2, JD1_buffer, \
+					shift_nu(nu_shift, lon_buf, lat_buf, t_access_buf, orb, JD1, JD2, JD1_buffer, \
 								DGG=DGG, LAN_shift=LAN_shift)
 				#
-				CST[i+1] = {'lon': lon_cst, 'lat': lat_cst, 't_access': t_access_cst, 'orb': orb_cst}
+				CST[i+1] = {'lon': lon_cst, 'lat': lat_cst, 't_access': t_access_cst, \
+							'orb': orb_cst, 'LAN_shift': LAN_shift, 'nu_shift': nu_shift}
+				#
 
 		else:
 			# run true simulations for each constellation member
-			lon, lat, t_access = get_coverage(orb, swath, JD1, JD2, \
+			lon0, lat0, t_access = get_coverage(orb, swath, JD1, JD2, \
 											res=res, verbose=verbose, lon=lon, lat=lat)
 			#
-			CST[0] = {'lon': lon, 'lat': lat, 't_access': t_access, 'orb': orb}
+			CST[0] = {'lon': lon0, 'lat': lat0, 't_access': t_access, \
+						'orb': orb, 'LAN_shift': 0.0, 'nu_shift': 0.0}
+			#
 			for i in range(len(LAN_shifts)):
 				LAN_shift = LAN_shifts[i]
 				nu_shift = nu_shifts[i]
@@ -72,8 +78,13 @@ class ConstellationShell:
 					# shift_LAN_orbit compensates for changes in MLST, if any
 					orb_cst = shift_LAN_orbit(LAN_shift, orb_cst)
 
-				lon_cst, lat_cst, t_access_cst = get_coverage(orb_cst, swath, JD1, JD2, res=res, verbose=verbose, lon=lon, lat=lat)
-				CST[i+1] = {'lon': lon_cst, 'lat': lat_cst, 't_access': t_access_cst, 'orb': orb_cst}
+				lon_cst, lat_cst, t_access_cst = \
+					get_coverage(orb_cst, swath, JD1, JD2, \
+								res=res, verbose=verbose, lon=lon, lat=lat)
+				#
+				CST[i+1] = {'lon': lon_cst, 'lat': lat_cst, 't_access': t_access_cst, \
+							'orb': orb_cst, 'LAN_shift': LAN_shift, 'nu_shift': nu_shift}
+				#
 
 
 		return CST
