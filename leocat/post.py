@@ -281,15 +281,16 @@ def shift_nu(nu_shift, lon, lat, t_access, orb, JD1, JD2, JD1_buffer, DGG=None, 
 	LAN_shift_nu_rad = -orb.get_LAN_dot()*dt_nu + W_EARTH*dt_nu # rad
 	LAN_shift_nu = np.degrees(LAN_shift_nu_rad)
 	lon = shift_LAN(LAN_shift + LAN_shift_nu, lon, lat, DGG=DGG, orb=None)
-	
+		
+	fix_swath = True
 	if w_true is None:
 		fix_swath = False
 
 	if fix_swath:
-		from leocat.utils.orbit import convert_ECI_EF
+		from leocat.utils.orbit import convert_ECI_ECF
 		from leocat.utils.math import interp, unit, dot
 		from leocat.utils.geodesy import RADEC_to_cart
-		
+
 		t1, t2 = np.min(t_total), np.max(t_total)
 		num = int((t2-t1)/dt_sc) + 1
 		t_space = np.linspace(t1,t2,num)
@@ -310,6 +311,12 @@ def shift_nu(nu_shift, lon, lat, t_access, orb, JD1, JD2, JD1_buffer, DGG=None, 
 		b = dist < w_true/2
 
 		t_access_shift = vector_to_t_access(t_total[b], index[b])
+		# from leocat.src.bt import J_NR, H_NR
+		# t_total, index = t_total[b], index[b]
+		# J = J_NR(t_total, orb_shift, np.radians(lon[index]), np.radians(lat[index]), JD1)
+		# H = H_NR(t_total, orb_shift, np.radians(lon[index]), np.radians(lat[index]), JD1)
+		# t_total = t_total - J/H
+		# t_access_shift = vector_to_t_access(t_total, index)
 
 	else:
 		t_access_shift = vector_to_t_access(t_total, index)

@@ -19,7 +19,8 @@ class ConstellationShell:
 		self.LAN_shifts = LAN_shifts
 		self.nu_shifts = nu_shifts
 
-	def get_access(self, verbose=2, approx=True, res=None, alpha=0.25, lon=None, lat=None):
+	def get_access(self, verbose=2, approx=True, res=None, alpha=0.25, lon=None, lat=None, \
+					fix_noise=True):
 
 		JD1, JD2 = self.JD1, self.JD2
 		orb = self.orb
@@ -30,15 +31,22 @@ class ConstellationShell:
 		if res is None:
 			res = alpha*swath
 
+
 		CST = {}
 		if approx:
+			w_approx = swath
+			w_true = None
+			if fix_noise:
+				w_approx = swath + res*np.sqrt(2)
+				w_true = swath
+
 			DGG = DiscreteGlobalGrid(A=res**2)
 			Tn = orb.get_period('nodal')
 			JD1_buffer = JD1 - Tn/86400
 			JD2_buffer = JD2 + Tn/86400
 			orb_buf = deepcopy(orb)
 			orb_buf.propagate_epoch((JD1_buffer-JD1)*86400, reset_epoch=True)
-			lon_buf, lat_buf, t_access_buf = get_coverage(orb_buf, swath, JD1_buffer, JD2_buffer, \
+			lon_buf, lat_buf, t_access_buf = get_coverage(orb_buf, w_approx, JD1_buffer, JD2_buffer, \
 												res=res, verbose=verbose, lon=lon, lat=lat)
 			#
 
@@ -54,8 +62,12 @@ class ConstellationShell:
 				nu_shift = nu_shifts[i]
 				lon_cst, lat_cst, t_access_cst, orb_cst = \
 					shift_nu(nu_shift, lon_buf, lat_buf, t_access_buf, orb, JD1, JD2, JD1_buffer, \
-								DGG=DGG, LAN_shift=LAN_shift)
+								DGG=DGG, LAN_shift=LAN_shift, w_true=w_true)
 				#
+				# lon_cst, lat_cst, t_access_cst, orb_cst = \
+				# 	shift_nu(nu_shift, lon_buf, lat_buf, t_access_buf, orb, JD1, JD2, JD1_buffer, \
+				# 				DGG=DGG, LAN_shift=LAN_shift)
+				# #
 				CST[i+1] = {'lon': lon_cst, 'lat': lat_cst, 't_access': t_access_cst, \
 							'orb': orb_cst, 'LAN_shift': LAN_shift, 'nu_shift': nu_shift}
 				#
