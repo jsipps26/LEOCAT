@@ -211,7 +211,17 @@ class DiscreteGlobalGrid:
 
 
 
-
+def lonlat_to_grid(lon_target0, lat_target0, DGG):
+	# input floating pt lon/lat
+	# outputs closest lon/lat on the DGG grid specified
+	lon, lat = DGG.get_lonlat()
+	dlat = DGG.dlat
+	b = np.abs(lat-lat_target0) < dlat/2
+	lon, lat = lon[b], lat[b]
+	lat_target = lat[0]
+	i = np.argmin(np.abs(lon-lon_target0))
+	lon_target = lon[i]
+	return lon_target, lat_target
 
 def set_projection_res(res_km, projection):
 	if projection == 'LLA': # DO NOT MODIFY THIS
