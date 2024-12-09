@@ -21,6 +21,25 @@ class ConstellationShell:
 
 	def get_access(self, verbose=2, approx=True, res=None, alpha=0.25, lon=None, lat=None, \
 					fix_noise=True):
+		#
+		"""
+		Assuming you always want snap-to-grid
+
+		if nothing is input:
+			goes to a default res
+			builds DGG
+
+		elif res has value, and lon/lat are None:
+			build DGG using given res
+
+		elif res is None, and lon/lat have value:
+			error
+			lon/lat must be assumed to be on the grid
+			If not, there's no DGG which is fine on
+			its own, but if you always want snap-to-grid,
+			you -must- have a res or no lla input.
+
+		"""
 
 		JD1, JD2 = self.JD1, self.JD2
 		orb = self.orb
@@ -28,8 +47,25 @@ class ConstellationShell:
 		LAN_shifts = self.LAN_shifts
 		nu_shifts = self.nu_shifts
 
-		if res is None:
+		res_exists = res is not None
+		lonlat_exists = (lon is not None) and (lat is not None)
+
+		if res_exists and lonlat_exists:
+			DGG = DiscreteGlobalGrid(A=res**2)
+		elif res_exists and not lonlat_exists:
+			DGG = DiscreteGlobalGrid(A=res**2)
+		elif not res_exists and lonlat_exists:
+			if approx:
+				raise Exception('Cannot snap to grid without res specified.')
+		elif not res_exists and not lonlat_exists:
 			res = alpha*swath
+			if res > 100:
+				res = 100
+			DGG = DiscreteGlobalGrid(A=res**2)
+
+		if ((lon is None) and not (lat is None)) or \
+			(not (lon is None) and (lat is None)):
+			raise Exception('If inputting lon/lat, must input both lon/lat.')
 
 
 		CST = {}
@@ -37,10 +73,11 @@ class ConstellationShell:
 			w_approx = swath
 			w_true = None
 			if fix_noise:
+				# w_approx = swath + 2*res
 				w_approx = swath + res*np.sqrt(2)
 				w_true = swath
 
-			DGG = DiscreteGlobalGrid(A=res**2)
+			# DGG = DiscreteGlobalGrid(A=res**2)
 			Tn = orb.get_period('nodal')
 			JD1_buffer = JD1 - Tn/86400
 			JD2_buffer = JD2 + Tn/86400
@@ -64,10 +101,6 @@ class ConstellationShell:
 					shift_nu(nu_shift, lon_buf, lat_buf, t_access_buf, orb, JD1, JD2, JD1_buffer, \
 								DGG=DGG, LAN_shift=LAN_shift, w_true=w_true)
 				#
-				# lon_cst, lat_cst, t_access_cst, orb_cst = \
-				# 	shift_nu(nu_shift, lon_buf, lat_buf, t_access_buf, orb, JD1, JD2, JD1_buffer, \
-				# 				DGG=DGG, LAN_shift=LAN_shift)
-				# #
 				CST[i+1] = {'lon': lon_cst, 'lat': lat_cst, 't_access': t_access_cst, \
 							'orb': orb_cst, 'LAN_shift': LAN_shift, 'nu_shift': nu_shift}
 				#

@@ -41,10 +41,20 @@ class AnalyticCoverage:
 		if GL is None:
 			GL_flag = 0
 
-		propagator = orb.propagator
-		if not (propagator == 'kepler' or propagator == 'SPE+frozen'):
+		# propagator = orb.propagator
+		# if not (propagator == 'kepler' or propagator == 'SPE+frozen'):
+
+		Tn_constant = 0
+		if orb.get_omega_dot() == 0.0 or orb.e == 0.0:
+			Tn_constant = 1
+
+		if not Tn_constant:
 			import warnings
-			warnings.warn('AnalyticCoverage only accurate for kepler or SPE+frozen propagators')
+			warnings.warn('AnalyticCoverage may be inaccurate if Tn varies (e > 0 and omega_dot != 0)')
+
+		# if propagator == 'SPE' and orb.e > 0.0:
+		# 	import warnings
+		# 	warnings.warn('AnalyticCoverage may be inaccurate for SPE with e > 0')
 
 		t_access_init_total, index_total = \
 			BT_coverage_init(orb, swath, lon, lat, JD1, JD2, verbose=verbose)
@@ -103,6 +113,7 @@ def BT_coverage_init(orb, swath, lon, lat, JD1, JD2, verbose=0):
 		lat0 = keys[j]
 		idx = lat_data[lat0]
 		lon_vec = lon[idx]
+		# print(lat0, len(lon_vec))
 		# p_vec = p[idx]
 
 		lons0, us0, ts0, split, invalid_left, invalid_right, lat_in_bounds, pole_in_view = \
