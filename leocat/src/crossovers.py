@@ -8,6 +8,17 @@ from leocat.utils.const import *
 from leocat.utils.orbit import orb_to_tracks
 from pyproj import CRS, Transformer
 
+"""
+To do
+Estimator doesn't find intersections exactly at the equator
+- edge-case, relatively simple fix..
+
+Could probably vastly reduce computation time by ensuring only
+one unique latitude is found at a time, instead of just
+iterating over every single track combination.
+
+"""
+
 
 class Path:
 
