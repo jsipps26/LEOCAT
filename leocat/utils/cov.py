@@ -38,7 +38,6 @@ def get_num_obs(t_access_avg, num_pts):
 		num_obs[key] = num_obs[key] + len(t_access_avg[key])
 	return num_obs
 
-	
 @njit
 def get_dt_avg_MC_numba(t, q, N_MC):
 	dt_avg_MC = 0.0

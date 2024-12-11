@@ -2,8 +2,7 @@
 import numpy as np
 from leocat.utils.orbit import Orbit, MLST_to_LAN
 from leocat.src.rgt import RepeatGroundTrack
-
-
+from leocat.utils.const import *
 
 def LEO(alt, inc, e=0.0, LAN=0.0, omega=270.0, nu=90.0, propagator='SPE+frozen', warn=True):
 	a = R_earth + alt
