@@ -286,37 +286,98 @@ def shift_nu(nu_shift, lon, lat, t_access, orb, JD1, JD2, JD1_buffer, DGG=None, 
 	if w_true is None:
 		fix_swath = False
 
-	if fix_swath:
-		from leocat.utils.orbit import convert_ECI_ECF
-		from leocat.utils.math import interp, unit, dot
-		from leocat.utils.geodesy import RADEC_to_cart
+	if fix_swath and len(t_total) > 0:
+		if 0:
+			from leocat.utils.orbit import convert_ECI_ECF
+			from leocat.utils.math import interp, unit, dot
+			from leocat.utils.geodesy import RADEC_to_cart
 
-		t1, t2 = np.min(t_total), np.max(t_total)
-		num = int((t2-t1)/dt_sc) + 1
-		t_space = np.linspace(t1,t2,num)
+			t1, t2 = np.min(t_total), np.max(t_total)
+			num = int((t2-t1)/dt_sc) + 1
+			t_space = np.linspace(t1,t2,num)
 
-		r_eci_sc, v_eci_sc = orb_shift.propagate(t_space)
-		r_ecf_sc = convert_ECI_ECF(JD1 + t_space/86400, r_eci_sc)
-		r_ecf_sc_intp = interp(t_total, t_space, r_ecf_sc)
+			r_eci_sc, v_eci_sc = orb_shift.propagate(t_space)
+			r_ecf_sc = convert_ECI_ECF(JD1 + t_space/86400, r_eci_sc)
+			r_ecf_sc_intp = interp(t_total, t_space, r_ecf_sc)
 
-		phi = np.radians(lat)
-		phi_c = np.arctan((R_earth_pole/R_earth)**2 * np.tan(phi))
-		lat_c = np.degrees(phi_c)
-		
-		p_hat = RADEC_to_cart(lon, lat_c)[index]
-		r_hat = unit(r_ecf_sc_intp)
-		proj = dot(r_hat,p_hat)
-		dpsi = np.arccos(proj)
-		dist = R_earth*dpsi
-		b = dist < w_true/2
+			phi = np.radians(lat)
+			phi_c = np.arctan((R_earth_pole/R_earth)**2 * np.tan(phi))
+			lat_c = np.degrees(phi_c)
+			
+			p_hat = RADEC_to_cart(lon, lat_c)[index]
+			r_hat = unit(r_ecf_sc_intp)
+			proj = dot(r_hat,p_hat)
+			dpsi = np.arccos(proj)
+			dist = R_earth*dpsi
+			b = dist < w_true/2
 
-		t_access_shift = vector_to_t_access(t_total[b], index[b])
-		# from leocat.src.bt import J_NR, H_NR
-		# t_total, index = t_total[b], index[b]
-		# J = J_NR(t_total, orb_shift, np.radians(lon[index]), np.radians(lat[index]), JD1)
-		# H = H_NR(t_total, orb_shift, np.radians(lon[index]), np.radians(lat[index]), JD1)
-		# t_total = t_total - J/H
-		# t_access_shift = vector_to_t_access(t_total, index)
+			t_access_shift = vector_to_t_access(t_total[b], index[b])
+			# from leocat.src.bt import J_NR, H_NR
+			# t_total, index = t_total[b], index[b]
+			# J = J_NR(t_total, orb_shift, np.radians(lon[index]), np.radians(lat[index]), JD1)
+			# H = H_NR(t_total, orb_shift, np.radians(lon[index]), np.radians(lat[index]), JD1)
+			# t_total = t_total - J/H
+			# t_access_shift = vector_to_t_access(t_total, index)
+
+		else:
+			# t_total, index_total = t_access_to_vector(t_access)
+			# inc = orb_shift.inc
+			# M = orb_shift.M0 + orb_shift.get_M_dot()*(t-orb_shift.t0)
+			# nu = M2nu(M,orb_shift.e)
+			# omega = orb_shift.omega + orb_shift.get_omega_dot()*(t-orb_shift.t0)
+			# u = omega + nu
+			# LAN = orb_shift.LAN + orb_shift.get_LAN_dot()*(t-orb_shift.t0)
+			# Lam = lam + rad(get_GMST(t/86400 + JD1)) - LAN
+
+			from leocat.src.bt import J_NR, H_NR
+			from leocat.utils.orbit import get_GMST
+
+			phi = np.radians(lat)
+			phi_c = np.arctan((R_earth_pole/R_earth)**2 * np.tan(phi))
+			lam = rad(lon)[index]
+			phi = phi_c[index]
+
+			J = J_NR(t_total, orb_shift, lam, phi, JD1)
+			H = H_NR(t_total, orb_shift, lam, phi, JD1)
+			t_total = t_total - J/H
+
+			inc = orb_shift.inc
+			j = 0
+			max_iter = 10
+			while j < max_iter:
+				OE = orb_shift.propagate(t_total, return_OEs=True)
+				u = OE.T[-2] + OE.T[-1]
+				LAN = OE.T[3]
+				Lam = lam + rad(get_GMST(t_total/86400 + JD1)) - LAN
+				arg = np.cos(phi)*np.cos(Lam)/np.cos(u)
+				b_valid = np.abs(arg) <= 1.0
+				if not b_valid.all():
+					J = J_NR(t_total[~b_valid], orb_shift, lam[~b_valid], phi[~b_valid], JD1)
+					H = H_NR(t_total[~b_valid], orb_shift, lam[~b_valid], phi[~b_valid], JD1)
+					t_total[~b_valid] = t_total[~b_valid] - J/H
+				else:
+					break
+
+				j += 1
+
+			if j == max_iter:
+				import warnings
+				warnings.warn('Swath trim did not converge (fix_noise=1).')
+
+			# print('')
+			# print(len(b_valid), b_valid.sum())
+
+			dist = np.full(index.shape, np.nan)
+			dpsi = np.arccos(arg[b_valid])
+			dist[b_valid] = R_earth*dpsi
+			b = dist < w_true/2
+
+			t_access_shift = vector_to_t_access(t_total[b], index[b])
+
+			# t_total_w = t_total[b]
+			# index_total_w = index[b]
+			# t_access_w = vector_to_t_access(t_total_w, index_total_w)
+			# t_access_shift = t_access_w
 
 	else:
 		t_access_shift = vector_to_t_access(t_total, index)
