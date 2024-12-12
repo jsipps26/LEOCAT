@@ -288,6 +288,8 @@ def shift_nu(nu_shift, lon, lat, t_access, orb, JD1, JD2, JD1_buffer, DGG=None, 
 
 	if fix_swath and len(t_total) > 0:
 		if 0:
+			# Trim swath via GPA/conical FOV
+
 			from leocat.utils.orbit import convert_ECI_ECF
 			from leocat.utils.math import interp, unit, dot
 			from leocat.utils.geodesy import RADEC_to_cart
@@ -320,6 +322,9 @@ def shift_nu(nu_shift, lon, lat, t_access, orb, JD1, JD2, JD1_buffer, DGG=None, 
 			# t_access_shift = vector_to_t_access(t_total, index)
 
 		else:
+			# Trim swath via BT
+			#	requires highly precise J_NR ~ 0
+
 			# t_total, index_total = t_access_to_vector(t_access)
 			# inc = orb_shift.inc
 			# M = orb_shift.M0 + orb_shift.get_M_dot()*(t-orb_shift.t0)

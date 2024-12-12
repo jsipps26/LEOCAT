@@ -5,7 +5,59 @@ from leocat.utils.const import *
 from leocat.utils.time import ymdhms_to_val, date_to_jd
 from leocat.utils.index import overlap
 
+def get_num_calls_per_proc(num, max_procs, debug=0):
+	# num = Nx*Ny
+	num_calls = num/max_procs
+	rem = num_calls % 1
+	if rem != 0.0:
+		rnd = np.random.uniform(0,1,max_procs)
+		b = rnd < rem
+		num_calls_proc = np.full(max_procs, num_calls).astype(int)
+		num_calls_proc[b] += 1
+		err = np.sum(num_calls_proc) - num
 
+		# modify elements in num_calls_proc s.t. sum is equal to Nx*Ny
+		if err > 0:
+			# subtract from largest values
+			idx = np.where(num_calls_proc == np.max(num_calls_proc))[0].astype(int)
+			count = 0
+			for i in idx:
+				num_calls_proc[i] -= 1
+				count += 1
+				if count == err:
+					break
+
+		elif err < 0:
+			# add to smallest values
+			idx = np.where(num_calls_proc == np.min(num_calls_proc))[0].astype(int)
+			count = 0
+			for i in idx:
+				num_calls_proc[i] += 1
+				count -= 1
+				if count == err:
+					break
+
+		# num_calls_proc[-1] = num_calls_proc[-1] - err
+		if debug:
+			# test MC
+			S_vec = []
+			for J in range(10000):
+				rnd = np.random.uniform(0,1,max_procs)
+				b = rnd < rem
+				num_calls_proc = np.full(max_procs, num_calls).astype(int)
+				num_calls_proc[b] += 1
+				S = np.sum(num_calls_proc)
+				S_vec.append(S)
+			S_vec = np.array(S_vec)
+			S_avg = np.mean(S_vec)
+			print(num, S_avg)
+
+	else:
+		num_calls_proc = np.full(max_procs, num_calls).astype(int)
+
+	return num_calls_proc
+
+	
 def format_as_array(vec):
 	if isinstance(vec, np.ndarray):
 		return vec
