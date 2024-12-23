@@ -2,6 +2,18 @@
 
 import numpy as np
 
+
+def CDS_time_to_JD(valid_time):
+	# Conversion of valid_time from Climate Data Store (CDS) to JD
+	# valid_time = np.array(ds['valid_time']) # seconds since 1970-01-01
+	JD0 = date_to_jd(1970,1,1)
+	days = valid_time / 86400
+	JD = JD0 + days
+	# JD1 = date_to_jd(2021,1,1)
+	# t = (JD-JD1) * 86400
+	return JD
+
+
 def date_to_ymd(date):
 	# change date1 into y,m,d to input into date_to_jd
 	date_ymd = []
