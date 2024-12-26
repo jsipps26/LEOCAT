@@ -5,6 +5,7 @@ import numpy as np
 
 def CDS_time_to_JD(valid_time):
 	# Conversion of valid_time from Climate Data Store (CDS) to JD
+	#	validation: https://dqydj.com/unix-time-to-date-converter/
 	# valid_time = np.array(ds['valid_time']) # seconds since 1970-01-01
 	JD0 = date_to_jd(1970,1,1)
 	days = valid_time / 86400
