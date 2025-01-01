@@ -3,6 +3,26 @@
 import numpy as np
 
 
+
+def GMAT_UTC_to_JD(GMAT_UTC):
+	# 2000-01-01T11:59:28.000
+	# from leocat.utils.time import date_to_jd
+	parse = GMAT_UTC.split('-')
+	year = int(parse[0])
+	month = int(parse[1])
+
+	day_hms = parse[2].split('T')
+	day = int(day_hms[0])
+
+	hms = day_hms[1].split(':')
+	hour = int(hms[0])
+	minute = int(hms[1])
+	sec = float(hms[2])
+
+	JD = date_to_jd(year, month, day + hour/24 + minute/(24*60) + sec/(24*60*60))
+	return JD
+
+	
 def CDS_time_to_JD(valid_time):
 	# Conversion of valid_time from Climate Data Store (CDS) to JD
 	#	validation: https://dqydj.com/unix-time-to-date-converter/

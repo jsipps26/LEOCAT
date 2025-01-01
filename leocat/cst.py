@@ -15,6 +15,7 @@ from tqdm import tqdm
 
 
 class ConstellationShell:
+
 	def __init__(self, orb, swath, JD1, JD2, LAN_shifts=[], nu_shifts=[]):
 		self.JD1 = JD1
 		self.JD2 = JD2
