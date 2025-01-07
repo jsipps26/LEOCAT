@@ -6,7 +6,7 @@ from leocat.utils.const import *
 from copy import deepcopy
 from leocat.utils.math import rad, wrap
 from leocat.utils.index import hash_cr_DGG
-from leocat.cov import t_access_to_vector, vector_to_t_access
+from leocat.cov import access_to_vector, vector_to_access
 
 """
 To do
@@ -24,7 +24,7 @@ def trim_swath(orb, w_new, lon, lat, JD1, t_access, dt_sc=60.0):
 	from leocat.utils.orbit import convert_ECI_ECF
 	from leocat.utils.geodesy import RADEC_to_cart
 
-	t_total, index_total = t_access_to_vector(t_access)
+	t_total, index_total = access_to_vector(t_access)
 	t1, t2 = np.min(t_total), np.max(t_total)
 	num = int((t2-t1)/dt_sc) + 1
 	t_space = np.linspace(t1,t2,num)
@@ -46,7 +46,7 @@ def trim_swath(orb, w_new, lon, lat, JD1, t_access, dt_sc=60.0):
 
 	t_total_w = t_total[b]
 	index_total_w = index_total[b]
-	t_access_w = vector_to_t_access(t_total_w, index_total_w)
+	t_access_w = vector_to_access(t_total_w, index_total_w)
 
 	return t_access_w
 
@@ -138,9 +138,9 @@ def shift_LAN(LAN_shift, lon, lat, DGG=None, orb=None):
 
 
 def trim_time(t_access, t1, t2, time_shift=0.0):
-	t_total, index = t_access_to_vector(t_access)
+	t_total, index = access_to_vector(t_access)
 	b = (t1 <= t_total) & (t_total < t2)
-	t_access_trim = vector_to_t_access(t_total[b] + time_shift, index[b])
+	t_access_trim = vector_to_access(t_total[b] + time_shift, index[b])
 	return t_access_trim
 
 def shift_time(t_access, time_shift):
@@ -240,7 +240,7 @@ def shift_nu(nu_shift, lon, lat, t_access, orb, JD1, JD2, JD1_buffer, DGG=None, 
 
 	"""
 	# shift times by dt_nu, trim by JD1/2
-	t_total, index = t_access_to_vector(t_access)
+	t_total, index = access_to_vector(t_access)
 	dJD_nu = dt_nu/86400.0
 	JD = JD1_buffer + t_total/86400.0
 	b_buffer = ((JD1+dJD_nu) <= JD) & (JD < (JD2+dJD_nu))
@@ -248,7 +248,7 @@ def shift_nu(nu_shift, lon, lat, t_access, orb, JD1, JD2, JD1_buffer, DGG=None, 
 	index = index[b_buffer]
 	dt_buffer = (JD1-JD1_buffer)*86400 # shift back to JD1 epoch
 	t_total = t_total - dt_buffer
-	# t_access_shift = vector_to_t_access(t_total, index)
+	# t_access_shift = vector_to_access(t_total, index)
 
 	"""
 	t1, t2 = np.min(t_total), np.max(t_total)
@@ -272,7 +272,7 @@ def shift_nu(nu_shift, lon, lat, t_access, orb, JD1, JD2, JD1_buffer, DGG=None, 
 
 	t_total_w = t_total[b]
 	index_total_w = index_total[b]
-	t_access_w = vector_to_t_access(t_total_w, index_total_w)
+	t_access_w = vector_to_access(t_total_w, index_total_w)
 	"""
 
 	# keys = np.array(list(t_access_shift.keys()))
@@ -313,19 +313,19 @@ def shift_nu(nu_shift, lon, lat, t_access, orb, JD1, JD2, JD1_buffer, DGG=None, 
 			dist = R_earth*dpsi
 			b = dist < w_true/2
 
-			t_access_shift = vector_to_t_access(t_total[b], index[b])
+			t_access_shift = vector_to_access(t_total[b], index[b])
 			# from leocat.src.bt import J_NR, H_NR
 			# t_total, index = t_total[b], index[b]
 			# J = J_NR(t_total, orb_shift, np.radians(lon[index]), np.radians(lat[index]), JD1)
 			# H = H_NR(t_total, orb_shift, np.radians(lon[index]), np.radians(lat[index]), JD1)
 			# t_total = t_total - J/H
-			# t_access_shift = vector_to_t_access(t_total, index)
+			# t_access_shift = vector_to_access(t_total, index)
 
 		else:
 			# Trim swath via BT
 			#	requires highly precise J_NR ~ 0
 
-			# t_total, index_total = t_access_to_vector(t_access)
+			# t_total, index_total = access_to_vector(t_access)
 			# inc = orb_shift.inc
 			# M = orb_shift.M0 + orb_shift.get_M_dot()*(t-orb_shift.t0)
 			# nu = M2nu(M,orb_shift.e)
@@ -377,15 +377,15 @@ def shift_nu(nu_shift, lon, lat, t_access, orb, JD1, JD2, JD1_buffer, DGG=None, 
 			dist[b_valid] = R_earth*dpsi
 			b = dist < w_true/2
 
-			t_access_shift = vector_to_t_access(t_total[b], index[b])
+			t_access_shift = vector_to_access(t_total[b], index[b])
 
 			# t_total_w = t_total[b]
 			# index_total_w = index[b]
-			# t_access_w = vector_to_t_access(t_total_w, index_total_w)
+			# t_access_w = vector_to_access(t_total_w, index_total_w)
 			# t_access_shift = t_access_w
 
 	else:
-		t_access_shift = vector_to_t_access(t_total, index)
+		t_access_shift = vector_to_access(t_total, index)
 
 
 	return lon, lat, t_access_shift, orb_shift
@@ -447,14 +447,14 @@ def shift_nu(nu_shift, lon, lat, t_access, orb, JD1, JD2, JD1_buffer, DGG=None, 
 
 # 	"""
 # 	# shift times by dt_nu, trim by JD1/2
-# 	t_total, index = t_access_to_vector(t_access)
+# 	t_total, index = access_to_vector(t_access)
 # 	dJD_nu = dt_nu/86400.0
 # 	JD = JD1_buffer + t_total/86400.0
 # 	b_buffer = ((JD1+dJD_nu) <= JD) & (JD < (JD2+dJD_nu))
 # 	t_total = t_total[b_buffer] - dt_nu # trim by dt_nu
 # 	index = index[b_buffer]
 # 	dt_buffer = (JD1-JD1_buffer)*86400 # shift back to JD1 epoch
-# 	t_access_shift = vector_to_t_access(t_total - dt_buffer, index)
+# 	t_access_shift = vector_to_access(t_total - dt_buffer, index)
 
 # 	"""
 # 	t1, t2 = np.min(t_total), np.max(t_total)
@@ -478,7 +478,7 @@ def shift_nu(nu_shift, lon, lat, t_access, orb, JD1, JD2, JD1_buffer, DGG=None, 
 
 # 	t_total_w = t_total[b]
 # 	index_total_w = index_total[b]
-# 	t_access_w = vector_to_t_access(t_total_w, index_total_w)
+# 	t_access_w = vector_to_access(t_total_w, index_total_w)
 # 	"""
 
 # 	# keys = np.array(list(t_access_shift.keys()))

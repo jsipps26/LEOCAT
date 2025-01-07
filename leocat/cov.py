@@ -11,7 +11,7 @@ from leocat.src.fpt import Satellite, Instrument # WIP
 from leocat.utils.cov import get_num_obs, get_revisit
 
 
-def vector_to_t_access(t_total, index):
+def vector_to_access(t_total, index):
 	from pandas import DataFrame
 	df = DataFrame({'index': index})
 	index_indices = df.groupby('index',sort=False).indices
@@ -22,7 +22,7 @@ def vector_to_t_access(t_total, index):
 	return t_access
 
 
-def t_access_to_vector(t_access):
+def access_to_vector(t_access):
 	t_total = []
 	index = []
 	for key in t_access:
