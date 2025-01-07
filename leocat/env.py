@@ -86,6 +86,18 @@ class RasterLayer():
 	if a "smaller" time-span is present, the larger must also be present
 	i.e. cannot just specify a month or day
 
+
+	Protips
+	Even if everything works properly, the simulated coverage resolution
+	-value- must be ~2x less than that of the raster resolution (simulated 
+	must at "higher" resolution") for accurate sampling of the raster. 
+	1x less also works, but may lead to some aliasing. For clouds, it isn't 
+	really a problem since "cloud cover signal" is on the order of hundreds
+	of km. But wildfire, for example, has many bright outliers that can be 
+	easily missed if the simulated resolution -value- is not lower.
+		res < res_geophysical
+
+	
 	"""
 	def __init__(self, file, keys, read_function, x_edges=[-180.0,180.0], y_edges=[-90.0,90.0], \
 					parser='', name=None):
