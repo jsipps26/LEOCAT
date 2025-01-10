@@ -13,6 +13,47 @@ from leocat.utils.geodesy import ev_direct, ev_inverse
 from numba import njit
 
 
+def get_apparent_swath(orb, swath):
+	# Apparent swath at equator
+	# Circular orbits only
+	# 	source [7]
+	Dn = orb.get_nodal_day()
+	Tn = orb.get_period('nodal')
+	Q = Dn/Tn # R/D
+	inc_app = np.sin(orb.inc) / (np.cos(orb.inc) - 1/Q)
+	swath_app = swath / np.sin(inc_app)
+	return swath_app
+
+
+def get_num_obs_eq(orb, period, swath):
+	"""
+	Estimate N at equator
+		wall-to-wall coverage
+		period in solar days
+		divide by 2 for day- or night-only?
+	This might need to be mult. by nodal day/solar day
+	or vise-versa
+		but that's only off by like 2%
+
+	This is nearly equivalent to
+		np.mean(num_obs[at equator])
+	Somehow it works even far below repeat cycle
+
+	Can probably find day/night by dividing by 2
+	but only if SSO
+
+	"""
+	C = 2*np.pi*R_earth
+	Dn = orb.get_nodal_day()
+	Tn = orb.get_period('nodal')
+	# Q_solar = Dn/Tn # R/D, revs per nodal day
+	# Q_solar = 86400 / Tn # revs in 1 solar day
+	Q_solar = 86400 / Tn * 86400/Dn # revs in 1 solar day
+	swath_app = get_apparent_swath(orb, swath)
+	num_obs_eq = Q_solar*period * swath_app/C * 2 # *2 for day/night
+	return num_obs_eq
+
+
 def get_revisit(t_access_avg, num_pts, revisit_type='avg'):
 	revisit = np.full(num_pts,np.nan)
 	for key in t_access_avg:
