@@ -50,7 +50,7 @@ class AnalyticCoverage:
 
 		if not Tn_constant:
 			import warnings
-			warnings.warn('AnalyticCoverage may be inaccurate if Tn varies (e > 0 and omega_dot != 0)')
+			warnings.warn('AnalyticCoverage may be inaccurate if Tn varies (e > 0 or omega_dot != 0)')
 
 		# if propagator == 'SPE' and orb.e > 0.0:
 		# 	import warnings
@@ -60,7 +60,7 @@ class AnalyticCoverage:
 			BT_coverage_init(orb, swath, lon, lat, JD1, JD2, verbose=verbose)
 		#
 		t_BT, q_BT = BT_coverage(t_access_init_total, index_total, \
-								orb, lon, lat, JD1, JD2, accuracy=accuracy, GL=GL)
+								orb, lon, lat, JD1, JD2, accuracy=accuracy, verbose=verbose, GL=GL)
 		#
 		if GL_flag:
 			return t_BT, q_BT
@@ -101,6 +101,8 @@ def BT_coverage_init(orb, swath, lon, lat, JD1, JD2, verbose=0):
 
 	iterator = range(len(keys))
 	if verbose:
+		if verbose > 1:
+			print('computing coverage..')
 		from tqdm import tqdm
 		iterator = tqdm(iterator)
 
@@ -157,7 +159,7 @@ def BT_coverage_init(orb, swath, lon, lat, JD1, JD2, verbose=0):
 
 
 
-def BT_coverage(t_access_init_total, index_total, orb, lon, lat, JD1, JD2, accuracy=0, GL=None):
+def BT_coverage(t_access_init_total, index_total, orb, lon, lat, JD1, JD2, accuracy=0, verbose=0, GL=None):
 
 	t_access_init_total = np.concatenate(t_access_init_total)
 	index_total = np.concatenate(index_total)
@@ -165,6 +167,9 @@ def BT_coverage(t_access_init_total, index_total, orb, lon, lat, JD1, JD2, accur
 	GL_flag = 1
 	if GL is None:
 		GL_flag = 0
+
+	if verbose > 1:
+		print('refining time-tags and consolidating output..')
 
 	if accuracy >= 1:
 		dt_sc = 60.0
