@@ -1975,7 +1975,7 @@ def beta_analytic(LAN, inc, JD, body='sun'):
 
 def illum_frac(beta, elev_threshold):
 	# beta and elev_threshold in deg
-	arg = np.cos(np.radians(90-elev_threshold)) / np.cos(np.radians(np.abs(beta)))
+	arg = np.cos(np.radians(90-np.abs(elev_threshold))) / np.cos(np.radians(np.abs(beta)))
 	arg[arg > 1] = 1
 	f = 1/np.pi * np.arccos(arg)
 	return f
