@@ -15,3 +15,10 @@ __pycache__/
 *.egg
 *.ini
 build/
+
+
+docs/_build/*
+docs/build/*
+!docs/_static/.gitkeep
+!docs/_templates/.gitkeep
+docs/source/generated/*
