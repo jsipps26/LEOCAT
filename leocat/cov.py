@@ -11,35 +11,86 @@ from leocat.src.fpt import Satellite, Instrument # WIP
 from leocat.utils.cov import get_num_obs, get_revisit
 
 
-def vector_to_access(t_total, index):
+
+def vector_to_access(vector, index):
+	"""
+	Convert vectorized access time (or other quality) into
+	dictionary format.
+
+	:param vector: Vectorized access time
+	:type vector: numpy.ndarray[float]
+	:param index: Indices of access time (matching to dict keys)
+	:type index: numpy.ndarray[int]
+
+	:return: Access time/quality in dictionary format
+	:rtype: dict[int: numpy.ndarray[float]]
+
+	"""
+
 	from pandas import DataFrame
 	df = DataFrame({'index': index})
 	index_indices = df.groupby('index',sort=False).indices
-	t_access = {}
+	access = {}
 	for key in index_indices:
 		idx = index_indices[key]
-		t_access[key] = t_total[idx]
-	return t_access
+		access[key] = vector[idx]
+	return access
 
 
-def access_to_vector(t_access):
-	t_total = []
+def access_to_vector(access):
+	"""
+	Convert dictionary format access time (or other quality) into
+	vectorized format.
+
+	:param access: Dictionary of access times/quality
+	:type access: dict[int: numpy.ndarray[float]]
+	:return: 
+		- **vector (numpy.ndarray[float])** - Access time/quality values
+		- **index (numpy.ndarray[int])** - Access key/indices
+	:rtype: tuple(numpy.ndarray, numpy.ndarray)
+
+	"""
+
+	vector = []
 	index = []
-	for key in t_access:
-		tau = t_access[key]
-		t_total.append(tau)
+	for key in access:
+		tau = access[key]
+		vector.append(tau)
 		index.append(np.full(tau.shape, key))
-	t_total = np.concatenate(t_total)
+	vector = np.concatenate(vector)
 	index = np.concatenate(index)
-	return t_total, index
+	return vector, index
 
 
 def combine_coverage(lons, lats, t_access_list, DGG):
 	"""
-	Assuming all lons/lats are on the same DGG,
-	combine into one t_access
-		Re-indexes the final t_access to reflect
-		lon/lat_total
+	Combine access time from multiple coverage calculations
+	(e.g. from multiple satellites). This is useful for aggregation
+	access times of individual satellites to make access times 
+	for an entire constellation.
+
+	:param lons: List of longitudes of each access calculation.
+	:type lons: list[numpy.ndarray[float]]
+	:param lats: List of latitudes of each access calculation.
+	:type lats: list[numpy.ndarray[float]]
+	:param t_access_list: List of accesses for each calculation.
+	:type t_access_list: list[dict[int: numpy.ndarray[float]]]
+	:param DGG: Discrete global grid object specifying spatial grid.
+	:type DGG: DiscreteGlobalGrid
+
+	:return: 
+		- **lon_total (numpy.ndarray[float])** - Longitudes accessed by any access element
+		- **lat_total (numpy.ndarray[float])** - Latitudes accessed by any access element
+		- **t_access_total (dict[int: numpy.ndarray[float]])** - Combined access dictionary
+	:rtype: tuple(numpy.ndarray, numpy.ndarray, dict)
+
+	Additional Notes
+	-----------------
+	
+	All lons/lats must be on the same DGG.
+
+	This function re-indexes the final access dictionary to reflect
+	the subset of lons/lats that cover each other.
 
 	"""
 	from leocat.utils.index import hash_cr_DGG, hash_xy_DGG
@@ -71,6 +122,64 @@ def combine_coverage(lons, lats, t_access_list, DGG):
 
 
 def get_coverage(orb, swath, JD1, JD2, verbose=2, res=None, alpha=0.25, lon=None, lat=None):
+
+	"""
+	This function simplifies coverage calculation to a single routine,
+	assuming nadir-pointing observation. Grid resolution is assumed 
+	based on swath size unless specified (see Additional Notes).
+	
+	**Required Parameters**
+
+	:param orb: Orbit of satellite.
+	:type orb: Orbit
+	:param swath: Swath size (km)
+	:type swath: float
+	:param JD1: Starting Julian date of simulation.
+	:type JD1: float
+	:param JD2: Ending Julian date of simulation.
+	:type JD2: float
+
+	**Optional Parameters**
+
+	:param verbose: Set verbosity, 0, 1, or 2
+	:type verbose: int
+	:param res: Grid resolution (km)
+	:type res: float
+	:param alpha: If res and/or lon/lat unspecified, res = alpha*swath, default value: 0.25, typical alpha ~ 0.25 to 0.1
+	:type alpha: float
+	:param lon: Longitude of coverage grid 
+					(not necessarily on DGG)
+	:type lon: numpy.ndarray[float]
+	:param lat: Latitude of coverage grid 
+					(not necessarily on DGG)
+
+	:return: 
+		- **lon (numpy.ndarray[float])** - 
+			Longitudes in spatial extent (not necessarily accessed)
+		- **lat (numpy.ndarray[float])** - 
+			Latitudes in spatial extent (not necessarily accessed)
+		- **t_access (dict[int: numpy.ndarray[float]])** - 
+			Access times dictionary for this satellite
+	:rtype: tuple(numpy.ndarray, numpy.ndarray, dict)
+
+
+	Additional Notes
+	-----------------
+	
+	Assuming circular orbits only. Otherwise, use SimpleCoverage.
+
+	lon and lat must both be specified or neither be specified.
+
+	If res is None (default), res (grid resolution) is given the value \
+	res = alpha*swath
+
+	If lon/lat are not specified, auto-generate lon/lat by either \n
+	1. Use SwathEnvelope to build lon/lat only where swath exists
+	- occurs if swath coverage is small relative to area of Earth \n
+	2. Create a DGG globally
+	- occurs if swath coverage is large relative to area of Earth
+
+	"""
 
 	from leocat.src.bt import AnalyticCoverage
 
@@ -109,7 +218,7 @@ def get_coverage(orb, swath, JD1, JD2, verbose=2, res=None, alpha=0.25, lon=None
 			DGG = DiscreteGlobalGrid(A=res**2)
 			lon, lat = DGG.get_lonlat()
 
-	# spherical lat for AC
+	# spherical lat for AnalyticCoverage
 	phi = np.radians(lat)
 	phi_c = np.arctan((R_earth_pole/R_earth)**2 * np.tan(phi))
 	lat_c = np.degrees(phi_c)
