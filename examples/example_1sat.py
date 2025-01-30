@@ -2,6 +2,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+from leocat.utils.plot import pro_plot
+pro_plot() # for better figures
+
 from leocat.utils.time import date_to_jd
 from leocat.orb import LEO_RGT_SSO
 from leocat.cov import get_coverage, get_num_obs, get_revisit
