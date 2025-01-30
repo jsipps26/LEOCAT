@@ -9,6 +9,7 @@ Example: Determine average time between observations over Ukraine:<br>
 Simulation details: <br>
 Two satellites on 16-day repeat ground track, sun-synchronous equatorial crossing at 10am (descending) <br>
 Sat1 and Sat2 are phased 180 deg. apart, with a swath size of 345 km (FOV of 27 deg.)<br>
+
 ![ukraine_clouds](https://github.com/user-attachments/assets/b29f9773-a7de-431f-b528-b7c44e3874c9)
 
 **Install**<br> 
