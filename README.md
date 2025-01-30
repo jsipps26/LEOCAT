@@ -5,6 +5,8 @@ This python package is made to efficiently compute satellite regional access (th
 Access calculations are split into two major categories: time-series and grid-point series (or GP series). In time-series approaches, the satellite is propagated forward one step at a time, and access is computed. In GP series approaches, the time at which the satellite observes a point on Earth (a GP) is input, and the output is a time-series. The former is for accurate FOV area coverage over short spans (e.g., a day of simulation) while the latter is for coverage over months or years, which reveals satellite observation capability in the long term.
 <br>
 
+![ukraine_clouds](https://github.com/user-attachments/assets/b29f9773-a7de-431f-b528-b7c44e3874c9)
+
 **Install**<br> 
 Tested on python 3.7+<br>
 Make a new environment with python version 3.7, either through conda or your virtual environment manager of choice<br> 
