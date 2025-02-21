@@ -13,6 +13,22 @@ from leocat.utils.geodesy import ev_direct, ev_inverse
 from numba import njit
 
 
+def get_wall_to_wall_swath(orb):
+	# Swath s.t. equator exactly covered
+	# Circular orbits only
+	# 	source [7]
+	Dn = orb.get_nodal_day()
+	Tn = orb.get_period('nodal')
+	dlon = 360*Tn/Dn
+	swath = np.radians(dlon)*R_earth
+	Q = Dn/Tn # R/D
+	arg = np.abs(np.sin(orb.inc) / (np.cos(orb.inc) - 1/Q))
+	inc_app = np.arctan(arg)
+	swath_w2w = swath * np.sin(inc_app)
+
+	return swath_w2w
+
+
 def get_apparent_swath(orb, swath):
 	# Apparent swath at equator
 	# Circular orbits only
@@ -20,8 +36,10 @@ def get_apparent_swath(orb, swath):
 	Dn = orb.get_nodal_day()
 	Tn = orb.get_period('nodal')
 	Q = Dn/Tn # R/D
-	inc_app = np.sin(orb.inc) / (np.cos(orb.inc) - 1/Q)
+	arg = np.abs(np.sin(orb.inc) / (np.cos(orb.inc) - 1/Q))
+	inc_app = np.arctan(arg)
 	swath_app = swath / np.sin(inc_app)
+
 	return swath_app
 
 
@@ -269,107 +287,125 @@ def get_t_access_avg(t, access_interval):
 	return t_access_avg
 
 
-def swath_to_FOV(w, alt, radians=False):
-
-	# stupid approach
-	# here's a better one
-	# Law of Sines, spherical Earth
-	# swath_to_FOV
-	# theta = (w/2)/R_earth
-	# alpha = np.arctan( R_earth*np.sin(theta) / (R_earth + h - R_earth*np.cos(theta)) )
-	# FOV2 = np.degrees(alpha*2)
-
-	# Governing eqn
-	#	sin(alpha)/R = sin(alpha+theta)/(R+h)
-	#	alpha = FOV/2
-	#	w = R*theta*2
-
-	r0 = np.array([R_earth + alt, 0, 0])
-
-	u_hat0 = -unit(r0)
-	r_ground0 = ray_cast_vec(np.array([r0]), np.array([u_hat0]))
-	r_ground0 = r_ground0[0]
-
-	lon0, lat0, _ = ecf_to_lla(r_ground0[0], r_ground0[1], r_ground0[2])
-	lon1, lat1, _ = ev_direct(lon0, lat0, 90.0, w/2, radians=False, unit='km')
-	lon2, lat2, _ = ev_direct(lon0, lat0, 270.0, w/2, radians=False, unit='km')
-
-	r_ground1 = lla_to_ecf(lon1, lat1, 0)
-	r_ground2 = lla_to_ecf(lon2, lat2, 0)
-
-	u_hat1 = unit(r0 - r_ground1)
-	u_hat2 = unit(r0 - r_ground2)
-
-	proj = np.dot(u_hat1,u_hat2)
-	FOV = np.arccos(proj)*180/np.pi
-
+def swath_to_FOV(swath, alt, radians=False):
+	alpha = swath / (2*R_earth)
+	arg = np.sin(alpha) / ((R_earth+alt)/R_earth - np.cos(alpha))
+	eta = np.arctan(arg)
+	FOV = 2*np.degrees(eta)
 	if radians:
-		FOV = np.radians(FOV)
-
+		return np.radians(FOV)
 	return FOV
+
+def FOV_to_swath(FOV, alt, radians=False):
+	if radians:
+		eta = FOV/2
+	else:
+		eta = np.radians(FOV)/2
+	alpha = np.arcsin((R_earth+alt)/R_earth * np.sin(eta)) - eta
+	swath = 2*alpha * R_earth
+	return FOV
+
+# def swath_to_FOV(w, alt, radians=False):
+
+# 	# stupid approach
+# 	# here's a better one
+# 	# Law of Sines, spherical Earth
+# 	# swath_to_FOV
+# 	# theta = (w/2)/R_earth
+# 	# alpha = np.arctan( R_earth*np.sin(theta) / (R_earth + h - R_earth*np.cos(theta)) )
+# 	# FOV2 = np.degrees(alpha*2)
+
+# 	# Governing eqn
+# 	#	sin(alpha)/R = sin(alpha+theta)/(R+h)
+# 	#	alpha = FOV/2
+# 	#	w = R*theta*2
+
+# 	r0 = np.array([R_earth + alt, 0, 0])
+
+# 	u_hat0 = -unit(r0)
+# 	r_ground0 = ray_cast_vec(np.array([r0]), np.array([u_hat0]))
+# 	r_ground0 = r_ground0[0]
+
+# 	lon0, lat0, _ = ecf_to_lla(r_ground0[0], r_ground0[1], r_ground0[2])
+# 	lon1, lat1, _ = ev_direct(lon0, lat0, 90.0, w/2, radians=False, unit='km')
+# 	lon2, lat2, _ = ev_direct(lon0, lat0, 270.0, w/2, radians=False, unit='km')
+
+# 	r_ground1 = lla_to_ecf(lon1, lat1, 0)
+# 	r_ground2 = lla_to_ecf(lon2, lat2, 0)
+
+# 	u_hat1 = unit(r0 - r_ground1)
+# 	u_hat2 = unit(r0 - r_ground2)
+
+# 	proj = np.dot(u_hat1,u_hat2)
+# 	FOV = np.arccos(proj)*180/np.pi
+
+# 	if radians:
+# 		FOV = np.radians(FOV)
+
+# 	return FOV
 	
 
 
 # def w_from_FOV_new(FOV, alt, radians=True, debug=0):
-def FOV_to_swath(FOV, alt, radians=False, debug=0):
+# def FOV_to_swath(FOV, alt, radians=False, debug=0):
 
-	# [208]
-	# h = alt
-	# psi = np.radians(FOR/2)
-	# gamma = np.pi - np.arcsin((R_earth + h)*np.sin(psi) / R_earth)
-	# S = R_earth * np.cos(gamma) + (R_earth + h)*np.cos(psi)
-	# s = 2*S*np.sin(psi)
+# 	# [208]
+# 	# h = alt
+# 	# psi = np.radians(FOR/2)
+# 	# gamma = np.pi - np.arcsin((R_earth + h)*np.sin(psi) / R_earth)
+# 	# S = R_earth * np.cos(gamma) + (R_earth + h)*np.cos(psi)
+# 	# s = 2*S*np.sin(psi)
 
-	# stupid approaches
-	# here's a better one
-	# Law of Sines, spherical Earth
-	# FOV_to_swath
-	# alpha = np.radians(FOV)/2
-	# theta = np.arcsin((R_earth+h)/R_earth * np.sin(alpha)) - alpha
-	# w = R_earth * theta * 2
+# 	# stupid approaches
+# 	# here's a better one
+# 	# Law of Sines, spherical Earth
+# 	# FOV_to_swath
+# 	# alpha = np.radians(FOV)/2
+# 	# theta = np.arcsin((R_earth+h)/R_earth * np.sin(alpha)) - alpha
+# 	# w = R_earth * theta * 2
 
-	if not radians:
-		FOV = np.radians(FOV)
+# 	if not radians:
+# 		FOV = np.radians(FOV)
 
-	# alt = 700
-	r0 = np.array([R_earth + alt, 0, 0])
+# 	# alt = 700
+# 	r0 = np.array([R_earth + alt, 0, 0])
 
-	# FOV = np.radians(45.0)
-	u_hat1 = R3(-FOV/2) @ -unit(r0)
-	u_hat2 = R3(FOV/2) @ -unit(r0)
+# 	# FOV = np.radians(45.0)
+# 	u_hat1 = R3(-FOV/2) @ -unit(r0)
+# 	u_hat2 = R3(FOV/2) @ -unit(r0)
 
-	r_ground = ray_cast_vec(np.array([r0,r0]), np.array([u_hat1,u_hat2]))
-	lon1, lat1, _ = ecf_to_lla(r_ground[0][0], r_ground[0][1], r_ground[0][2])
-	lon2, lat2, _ = ecf_to_lla(r_ground[1][0], r_ground[1][1], r_ground[1][2])
+# 	r_ground = ray_cast_vec(np.array([r0,r0]), np.array([u_hat1,u_hat2]))
+# 	lon1, lat1, _ = ecf_to_lla(r_ground[0][0], r_ground[0][1], r_ground[0][2])
+# 	lon2, lat2, _ = ecf_to_lla(r_ground[1][0], r_ground[1][1], r_ground[1][2])
 
-	eps = 1e-4
-	dist = ev_inverse(lon1, lat1+eps, lon2, lat2, radians=False, dist_only=True, unit='km')
+# 	eps = 1e-4
+# 	dist = ev_inverse(lon1, lat1+eps, lon2, lat2, radians=False, dist_only=True, unit='km')
 
-	if debug:
-		from leocat.utils.plot import make_fig, draw_vector, set_axes_equal, set_aspect_equal
-		# make 2D
-		r0 = r0[:-1]
-		r_ground = r_ground[:,:-1]
+# 	if debug:
+# 		from leocat.utils.plot import make_fig, draw_vector, set_axes_equal, set_aspect_equal
+# 		# make 2D
+# 		r0 = r0[:-1]
+# 		r_ground = r_ground[:,:-1]
 
-		L_plot = alt*4
-		origin = np.mean(r_ground,axis=0)
+# 		L_plot = alt*4
+# 		origin = np.mean(r_ground,axis=0)
 
-		theta = np.linspace(0,2*np.pi,1000)
-		x = R_earth*np.cos(theta)
-		y = R_earth_pole*np.sin(theta)
+# 		theta = np.linspace(0,2*np.pi,1000)
+# 		x = R_earth*np.cos(theta)
+# 		y = R_earth_pole*np.sin(theta)
 
-		fig, ax = make_fig()
-		ax.plot(x, y)
-		ax.plot(r0[0], r0[1], '.')
-		draw_vector(ax, r0, r_ground[0], 'k')
-		draw_vector(ax, r0, r_ground[1], 'k')
-		set_axes_equal(ax)
-		set_aspect_equal(ax)
-		ax.set_xlim(origin[0]-L_plot/2, origin[0]+L_plot/2)
-		ax.set_ylim(origin[1]-L_plot/2, origin[1]+L_plot/2)
-		fig.show()
+# 		fig, ax = make_fig()
+# 		ax.plot(x, y)
+# 		ax.plot(r0[0], r0[1], '.')
+# 		draw_vector(ax, r0, r_ground[0], 'k')
+# 		draw_vector(ax, r0, r_ground[1], 'k')
+# 		set_axes_equal(ax)
+# 		set_aspect_equal(ax)
+# 		ax.set_xlim(origin[0]-L_plot/2, origin[0]+L_plot/2)
+# 		ax.set_ylim(origin[1]-L_plot/2, origin[1]+L_plot/2)
+# 		fig.show()
 
-	return dist
+# 	return dist
 
 
 
