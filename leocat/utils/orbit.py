@@ -1251,6 +1251,13 @@ def get_LAN_dot(a, e, inc, radians=True, mu=398600.4418, J2=0.00108248):
 		inc = np.radians(inc)
 	return -3*n*J2/2 * (R_earth/p)**2 * np.cos(inc)
 
+def get_inc_from_LAN_dot(a, LAN_dot, e=0.0):
+	e = 0.0
+	p = a*(1-e**2)
+	n = np.sqrt(MU/a**3)
+	arg = -3*n*J2/2 * (R_earth/p)**2
+	inc = np.arccos(LAN_dot / arg)
+	return inc
 
 def get_omega_dot(a, e, inc, radians=True, mu=398600.4418, J2=0.00108248):
 	# units in km, s
