@@ -21,6 +21,15 @@ def angle_in_region(theta0, theta1, theta2):
 
 	return found
 
+def arcsin_vec(arg, offset=0.0):
+	gamma = np.full(arg.shape, np.nan)
+	b = np.abs(arg) <= 1.0
+	gamma[b] = np.arcsin(arg[b])
+	gamma1 = gamma
+	gamma2 = np.pi-gamma
+	y1 = (gamma1-offset) % (2*np.pi)
+	y2 = (gamma2-offset) % (2*np.pi)
+	return y1, y2
 	
 def arcsin(arg, offset=0.0, solution=0):
 	# Finds two solutions for theta in [0,2pi]
