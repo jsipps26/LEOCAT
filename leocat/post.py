@@ -138,6 +138,7 @@ def shift_LAN(LAN_shift, lon, lat, DGG=None, orb=None):
 
 
 def trim_time(t_access, t1, t2, time_shift=0.0):
+	# preserves original indices in access keys
 	t_total, index = access_to_vector(t_access)
 	b = (t1 <= t_total) & (t_total < t2)
 	t_access_trim = vector_to_access(t_total[b] + time_shift, index[b])

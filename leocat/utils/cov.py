@@ -97,8 +97,10 @@ def get_num_obs(t_access_avg, num_pts):
 		num_obs[key] = num_obs[key] + len(t_access_avg[key])
 	return num_obs
 
+
 @njit
 def get_dt_avg_MC_numba(t, q, N_MC):
+	# Applicable to WSC
 	dt_avg_MC = 0.0
 	count = 0
 	for i in range(N_MC):
@@ -119,6 +121,7 @@ def get_dt_avg_MC_numba(t, q, N_MC):
 
 @njit
 def get_dt_max_MC_numba(t, q, N_MC):
+	# Applicable to WSC
 	dt_avg_MC = 0.0
 	count = 0
 	for i in range(N_MC):
@@ -139,6 +142,7 @@ def get_dt_max_MC_numba(t, q, N_MC):
 
 @njit
 def get_dt_min_MC_numba(t, q, N_MC):
+	# Applicable to WSC
 	dt_avg_MC = 0.0
 	count = 0
 	for i in range(N_MC):
@@ -303,7 +307,7 @@ def FOV_to_swath(FOV, alt, radians=False):
 		eta = np.radians(FOV)/2
 	alpha = np.arcsin((R_earth+alt)/R_earth * np.sin(eta)) - eta
 	swath = 2*alpha * R_earth
-	return FOV
+	return swath
 
 # def swath_to_FOV(w, alt, radians=False):
 

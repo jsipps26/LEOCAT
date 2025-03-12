@@ -351,13 +351,15 @@ def get_p_dt(p, idx, dt_vec, P_R, return_unique=False):
 
 
 def get_dt_true(p, idx, dt_vec, return_unique=False):
-	P_R = 1 - np.prod(1-p)
+	P_R = 1 - np.prod(1-p) # SSC-specific
 	p_dt = get_p_dt(p, idx, dt_vec, P_R, return_unique=return_unique)
 	dt_true = np.dot(p_dt.T[0],p_dt.T[1])
 	return dt_true, p_dt
 
 
 def numba_get_dt_MC(t, q, N_MC, func):
+	# All of these are SSC SPECIFIC
+	#	do not use these functions in general
 	if func is np.mean:
 		dt_MC = numba_get_dt_MC_mean(t, q, N_MC)
 	elif func is np.min:
@@ -368,6 +370,8 @@ def numba_get_dt_MC(t, q, N_MC, func):
 
 @njit
 def numba_get_dt_MC_mean(t, q, N_MC):
+	# All of these are SSC SPECIFIC
+	#	do not use these functions in general
 	t_bar_MC = 0.0
 	count = 0
 	for i in range(N_MC):
@@ -388,6 +392,8 @@ def numba_get_dt_MC_mean(t, q, N_MC):
 
 @njit
 def numba_get_dt_MC_min(t, q, N_MC):
+	# All of these are SSC SPECIFIC
+	#	do not use these functions in general
 	t_bar_MC = 0.0
 	count = 0
 	for i in range(N_MC):
@@ -408,6 +414,8 @@ def numba_get_dt_MC_min(t, q, N_MC):
 
 @njit
 def numba_get_dt_MC_max(t, q, N_MC):
+	# All of these are SSC SPECIFIC
+	#	do not use these functions in general
 	t_bar_MC = 0.0
 	count = 0
 	for i in range(N_MC):
@@ -518,12 +526,11 @@ class SmallSwathCoverage:
 	def __init__(self, orb, swath, res, JD1, JD2):
 		self.orb = orb
 		self.swath = swath
-
 		self.space_params = {'res': res}
 		self.time_params = {'JD1': JD1, 'JD2': JD2}
 
-		self.set_space_params()
-		self.propagate_ground_track()
+		# self.set_space_params()
+		# self.propagate_ground_track()
 
 	def set_space_params(self):
 		crs_lla = CRS.from_proj4(PROJ4_LLA).to_3d()
@@ -582,6 +589,10 @@ class SmallSwathCoverage:
 
 
 	def get_time(self, res_factor_AT=0.05):
+
+		self.set_space_params()
+		self.propagate_ground_track()
+		
 		if res_factor_AT > 0.25:
 			import warnings
 			warnings.warn('res_factor_AT > 0.25, SSC may miss grid cells')
@@ -600,6 +611,15 @@ class SmallSwathCoverage:
 
 		if verbose:
 			print('computing access..')
+
+		# self.space_params = {'res': self.res}
+		# self.time_params = {'JD1': self.JD1, 'JD2': self.JD2}
+
+		# self.set_space_params()
+		# self.propagate_ground_track()
+		# if t_ssc is None:
+		# 	t_ssc = self.get_time()
+		# self.t_ssc = t_ssc
 
 		space_params = self.space_params
 		cr = self.cr
