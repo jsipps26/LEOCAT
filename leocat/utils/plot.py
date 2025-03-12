@@ -778,11 +778,12 @@ def plot_sim(lines, RA, DEC, zoom=1.0, target=np.array([0,0,0]), alpha_edge=1.0,
 			ms = line.get_markersize()
 			zorder = line.get_zorder()
 			alpha = line.get_alpha()
+			lw = line.get_linewidth()
 			if m == 'None':
 				index_split = split_index(r,cam_vec)
 				r_plot_list = split_line(r,index_split)
 				for r_plot in r_plot_list:
-					ax.plot(r_plot.T[0], r_plot.T[1], r_plot.T[2], ls=ls, c=c, zorder=zorder, alpha=alpha)
+					ax.plot(r_plot.T[0], r_plot.T[1], r_plot.T[2], ls=ls, lw=lw, c=c, zorder=zorder, alpha=alpha)
 				# if len(index_split) > 1:
 				# else:
 				# 	ax.plot(r.T[0], r.T[1], r.T[2], ls=ls, c=c, zorder=zorder)
