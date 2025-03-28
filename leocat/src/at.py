@@ -7,6 +7,7 @@ from leocat.utils.orbit import get_GMST
 from leocat.utils.cov import FOV_to_swath, swath_to_FOV
 from leocat.utils.index import hash_index
 
+from numba import njit, types
 
 """
 Analytic time of access of the orbit, not the spacecraft
@@ -39,17 +40,38 @@ def get_access_bounds(orb, swath, lon, lat, JD1, JD2):
 	t_seg = get_t_seg(t_int0, angle_rate, lat_in_bounds, JD1, JD2)
 	return t_seg
 
+# def t_seg_to_idx(t_seg, dt, t0=0.0):
+# 	cols = np.array([])
+# 	if len(t_seg) > 0:
+# 		c1 = hash_index(t_seg.T[0], t0, dt)
+# 		c2 = hash_index(t_seg.T[1], t0, dt)
+# 		cols = []
+# 		for i in range(len(t_seg)):
+# 			cols0 = np.arange(c1[i],c2[i]+1)
+# 			cols.append(cols0)
+# 		cols = np.concatenate(cols)
+
+# 	return cols
+
+
 def t_seg_to_idx(t_seg, dt, t0=0.0):
 	cols = np.array([])
 	if len(t_seg) > 0:
-		c1 = hash_index(t_seg.T[0], t0, dt)
-		c2 = hash_index(t_seg.T[1], t0, dt)
-		cols = []
-		for i in range(len(t_seg)):
-			cols0 = np.arange(c1[i],c2[i]+1)
-			cols.append(cols0)
-		cols = np.concatenate(cols)
+		cols = t_seg_to_idx_numba(t_seg, dt, t0=t0)
+	return cols
 
+@njit
+def t_seg_to_idx_numba(t_seg, dt, t0=0.0):
+	c1 = np.floor((t_seg.T[0]-t0)/dt).astype(types.int64)
+	c2 = np.floor((t_seg.T[1]-t0)/dt).astype(types.int64)
+	num = np.sum(c2-c1) + len(c1)
+	cols = np.zeros(num,dtype=types.int64)
+	j1 = 0
+	for i in range(len(t_seg)):
+		cols0 = np.arange(c1[i],c2[i]+1)
+		j2 = j1 + len(cols0)
+		cols[j1:j2] = cols0
+		j1 = j2
 	return cols
 
 def t_seg_to_t_test(t_seg, dt, t0=0.0):
@@ -123,6 +145,47 @@ def get_lat_in_bounds(orb, lat, FOV):
 	return lat_in_bounds
 
 
+
+@njit
+def get_t_seg_n0(t_int0, angle_rate, num_days):
+	t_seg1 = np.array([t_int0[0], t_int0[1]])
+	t_seg2 = np.array([t_int0[2], t_int0[3]])
+	t_seg = np.zeros((2*num_days,2),dtype=types.float64)
+	for j in range(num_days):
+		t_seg[2*j,:] = t_seg1 + 2*np.pi*j/angle_rate
+		t_seg[2*j+1,:] = t_seg2 + 2*np.pi*j/angle_rate
+	return t_seg
+
+# def get_t_seg_n0(t_int0, angle_rate, num_days):
+# 	t_seg1 = np.array([t_int0[0], t_int0[1]])
+# 	t_seg2 = np.array([t_int0[2], t_int0[3]])
+# 	t_seg = []
+# 	for j in range(num_days):
+# 		t_seg.append(t_seg1 + 2*np.pi*j/angle_rate)
+# 		t_seg.append(t_seg2 + 2*np.pi*j/angle_rate)
+# 	t_seg = np.vstack(t_seg)
+# 	return t_seg
+
+# # @njit
+# # def get_t_seg_n2(t_int0, angle_rate, num_days):
+# # 	b = ~np.isnan(t_int0)
+# # 	# t_seg1 = np.sort(t_int0[b])
+# # 	t_seg1 = t_int0[b]
+# # 	t_seg = np.zeros((2*num_days,2),dtype=types.float64)
+# # 	for j in range(num_days):
+# # 		t_seg[j,:] = t_seg1 + 2*np.pi*j/angle_rate
+# # 	return t_seg
+
+def get_t_seg_n2(t_int0, angle_rate, num_days):
+	b = ~np.isnan(t_int0)
+	t_seg1 = np.sort(t_int0[b])
+	t_seg = []
+	for j in range(num_days):
+		t_seg.append(t_seg1 + 2*np.pi*j/angle_rate)
+	t_seg = np.vstack(t_seg)
+	return t_seg
+
+
 def get_t_seg(t_int0, angle_rate, lat_in_bounds, JD1, JD2):
 
 	num_days = int(np.ceil(JD2-JD1)) + 1
@@ -133,22 +196,10 @@ def get_t_seg(t_int0, angle_rate, lat_in_bounds, JD1, JD2):
 
 	t_seg = np.array([])
 	if num_nan == 0:
-		t_seg1 = np.array([t_int0[0], t_int0[1]])
-		t_seg2 = np.array([t_int0[2], t_int0[3]])
-		t_seg = []
-		for j in range(num_days):
-			t_seg.append(t_seg1 + 2*np.pi*j/angle_rate)
-			t_seg.append(t_seg2 + 2*np.pi*j/angle_rate)
-		t_seg = np.vstack(t_seg)
+		t_seg = get_t_seg_n0(t_int0, angle_rate, num_days)
 
 	elif num_nan == 2:
-		# upper/lower latitudes
-		b = ~np.isnan(t_int0)
-		t_seg1 = np.sort(t_int0[b])
-		t_seg = []
-		for j in range(num_days):
-			t_seg.append(t_seg1 + 2*np.pi*j/angle_rate)
-		t_seg = np.vstack(t_seg)
+		t_seg = get_t_seg_n2(t_int0, angle_rate, num_days)
 
 	elif num_nan == 4:
 		# either always covered or never
@@ -168,6 +219,53 @@ def get_t_seg(t_int0, angle_rate, lat_in_bounds, JD1, JD2):
 		t_seg = t_seg[b]
 
 	return t_seg
+
+
+# def get_t_seg(t_int0, angle_rate, lat_in_bounds, JD1, JD2):
+
+# 	num_days = int(np.ceil(JD2-JD1)) + 1
+
+# 	sim_period = (JD2-JD1)*86400
+# 	num_nan = np.isnan(t_int0).sum()
+# 	b = ~np.isnan(t_int0)
+
+# 	t_seg = np.array([])
+# 	if num_nan == 0:
+# 		t_seg1 = np.array([t_int0[0], t_int0[1]])
+# 		t_seg2 = np.array([t_int0[2], t_int0[3]])
+# 		t_seg = []
+# 		for j in range(num_days):
+# 			t_seg.append(t_seg1 + 2*np.pi*j/angle_rate)
+# 			t_seg.append(t_seg2 + 2*np.pi*j/angle_rate)
+# 		t_seg = np.vstack(t_seg)
+
+# 	elif num_nan == 2:
+# 		# upper/lower latitudes
+# 		b = ~np.isnan(t_int0)
+# 		t_seg1 = np.sort(t_int0[b])
+# 		t_seg = []
+# 		for j in range(num_days):
+# 			t_seg.append(t_seg1 + 2*np.pi*j/angle_rate)
+# 		t_seg = np.vstack(t_seg)
+
+# 	elif num_nan == 4:
+# 		# either always covered or never
+# 		if lat_in_bounds:
+# 			# always accessed
+# 			t_seg = np.array([[0.0, sim_period]])
+# 		# else:
+# 		# 	# never accessed
+# 		# 	t_seg = []
+
+# 	else:
+# 		raise Exception('num_nan is odd')
+
+# 	if len(t_seg) > 0:
+# 		B = (0.0 <= t_seg) & (t_seg < sim_period)
+# 		b = np.any(B,axis=1)
+# 		t_seg = t_seg[b]
+
+# 	return t_seg
 
 
 
