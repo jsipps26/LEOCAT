@@ -29,17 +29,28 @@ def get_wall_to_wall_swath(orb):
 	return swath_w2w
 
 
-def get_apparent_swath(orb, swath):
-	# Apparent swath at equator
-	# Circular orbits only
-	# 	source [7]
+def get_apparent_swath(orb, swath, inverse=True):
+	"""
+	Apparent swath at equator
+	Circular orbits only
+		source [7]
+	If inverse=True, returns swath that sat should have
+	s.t. input swath is met given the sat inclination
+	"""
 	Dn = orb.get_nodal_day()
 	Tn = orb.get_period('nodal')
 	Q = Dn/Tn # R/D
 	arg = np.abs(np.sin(orb.inc) / (np.cos(orb.inc) - 1/Q))
 	inc_app = np.arctan(arg)
-	swath_app = swath / np.sin(inc_app)
+	if not inverse:
+		swath_app = swath / np.sin(inc_app)
+	else:
+		swath_app = swath * np.sin(inc_app)
 
+	# Q = Dn/Tn # R/D
+	# arg = np.abs(np.sin(np.radians(inc)) / (np.cos(np.radians(inc)) - 1/Q))
+	# inc_app = np.arctan(arg)
+	# w = w*np.sin(inc_app)
 	return swath_app
 
 
