@@ -22,9 +22,9 @@ class SimpleCoverage:
 		self.dt = None
 
 	def get_access(self, dt=None, f=0.25, verbose=1, solar_band=None, \
-						warn=True, spherical=False):
+						warn=True, spherical=False, fast_interval=True):
 		#
-		t, access = self.compute_coverage(dt, f, verbose, solar_band, warn, spherical)
+		t, access = self.compute_coverage(dt, f, verbose, solar_band, warn, spherical, fast_interval)
 		access_interval = get_access_interval(access)
 		t_access_avg = get_t_access_avg(t, access_interval)
 		return t_access_avg
@@ -113,10 +113,8 @@ class SimpleCoverage:
 		t = (JD-JD1)*86400
 		dt = t[1]-t[0]
 
-		# if fast_interval:
-		# 	from leocat.src.at import get_access_bounds, t_seg_to_idx
-		# 	t_seg = get_access_bounds(orb, swath, lon[j], lat[j], JD1, JD2)
-		# 	idx = t_seg_to_idx(t_seg, dt, t0=t[0])
+		if fast_interval:
+			from leocat.src.at import get_access_bounds, t_seg_to_idx
 
 		r_eci_sc, v_eci_sc = orb.propagate(t)
 		r_ecf_sc, v_ecf_sc = convert_ECI_ECF(JD, r_eci_sc, v_eci_sc)
@@ -141,43 +139,100 @@ class SimpleCoverage:
 		if verbose:
 			iterator = tqdm(iterator)
 
+		alpha_max = np.arccos(R_earth/a)
+
 		access = {}
 		for j in iterator:
 
 			p_hat0 = p_hat[j]
 			p0 = p[j]
 
-			alpha_max = np.arccos(R_earth/a)
-			proj_alpha = p_hat0[0]*r_hat.T[0] + p_hat0[1]*r_hat.T[1] + p_hat0[2]*r_hat.T[2]
-			alpha = np.arccos(proj_alpha)
+			# if fast_interval:
+			# 	t_seg = get_access_bounds(orb, swath, lon[j], lat[j], JD1, JD2)
+			# 	idx = t_seg_to_idx(t_seg, dt, t0=t[0])
 
-			dr = p0 - r_ecf_sc
-			dr_hat = unit(dr)
-			proj = dot(dr_hat,-r_hat)
-			angle = np.arccos(proj)
+			if not fast_interval:
+				# t_seg = get_access_bounds(orb, swath, lon[j], lat[j], JD1, JD2)
 
-			# q = np.ones(t.shape)
-			# if is_solar:
-			# 	p_lla0 = p_lla[j]
-			# 	elev = solar_elev(np.full(JD.shape,p_lla0[0]), np.full(JD.shape,p_lla0[1]), JD)
-			# 	b_solar = (solar_band[0] <= elev) & (elev <= solar_band[1])
-			# 	q = b_solar.astype(float)
-			# b = (alpha < alpha_max) & (angle < FOV/2) & (q > 0.0)
-			b = (alpha < alpha_max) & (angle < FOV/2)
+				proj_alpha = p_hat0[0]*r_hat.T[0] + p_hat0[1]*r_hat.T[1] + p_hat0[2]*r_hat.T[2]
+				dr = p0 - r_ecf_sc
 
-			if b.any():
-				if is_solar:
-					p_lla0 = p_lla[j]
-					elev = solar_elev(np.full(b.sum(),p_lla0[0]), np.full(b.sum(),p_lla0[1]), JD[b])
-					b_solar = (solar_band[0] <= elev) & (elev <= solar_band[1])
-					q = b_solar.astype(float)
-					if (~(q > 0.0)).all():
-						continue
+				dr_hat = unit(dr)
+				proj = dot(dr_hat,-r_hat)
+				angle = np.arccos(proj)
 
-					b[b] = b[b] & (q > 0.0)
+				alpha = np.arccos(proj_alpha)
 
-				idx = np.where(b)[0].astype(int)
-				access[j] = idx
+				# q = np.ones(t.shape)
+				# if is_solar:
+				# 	p_lla0 = p_lla[j]
+				# 	elev = solar_elev(np.full(JD.shape,p_lla0[0]), np.full(JD.shape,p_lla0[1]), JD)
+				# 	b_solar = (solar_band[0] <= elev) & (elev <= solar_band[1])
+				# 	q = b_solar.astype(float)
+				# b = (alpha < alpha_max) & (angle < FOV/2) & (q > 0.0)
+				b = (alpha < alpha_max) & (angle < FOV/2)
+
+				if b.any():
+					if is_solar:
+						p_lla0 = p_lla[j]
+						elev = solar_elev(np.full(b.sum(),p_lla0[0]), np.full(b.sum(),p_lla0[1]), JD[b])
+						b_solar = (solar_band[0] <= elev) & (elev <= solar_band[1])
+						q = b_solar.astype(float)
+						if (~(q > 0.0)).all():
+							continue
+
+						b[b] = b[b] & (q > 0.0)
+
+					idx = np.where(b)[0].astype(int)
+					access[j] = idx
+
+
+			else:
+				t_seg = get_access_bounds(orb, swath, lon[j], lat[j], JD1, JD2)
+				idx = t_seg_to_idx(t_seg, dt, t0=t[0])
+				idx = np.clip(idx,0,len(r_hat)-1)
+				# continue
+				if len(idx) == 0:
+					continue
+
+				# print('test')
+
+				# print(fast_interval, j, len(r_hat), len(idx))
+				# r_hat_idx = r_hat[idx]
+
+				proj_alpha = p_hat0[0]*r_hat[idx].T[0] + p_hat0[1]*r_hat[idx].T[1] + p_hat0[2]*r_hat[idx].T[2]
+				dr = p0 - r_ecf_sc[idx]
+
+				dr_hat = unit(dr)
+				proj = dot(dr_hat,-r_hat[idx])
+				angle = np.arccos(proj)
+
+				alpha = np.arccos(proj_alpha)
+
+				# q = np.ones(t.shape)
+				# if is_solar:
+				# 	p_lla0 = p_lla[j]
+				# 	elev = solar_elev(np.full(JD.shape,p_lla0[0]), np.full(JD.shape,p_lla0[1]), JD)
+				# 	b_solar = (solar_band[0] <= elev) & (elev <= solar_band[1])
+				# 	q = b_solar.astype(float)
+				# b = (alpha < alpha_max) & (angle < FOV/2) & (q > 0.0)
+				b = (alpha < alpha_max) & (angle < FOV/2)
+
+				if b.any():
+					if is_solar:
+						p_lla0 = p_lla[j]
+						elev = solar_elev(np.full(b.sum(),p_lla0[0]), np.full(b.sum(),p_lla0[1]), JD[b])
+						b_solar = (solar_band[0] <= elev) & (elev <= solar_band[1])
+						q = b_solar.astype(float)
+						if (~(q > 0.0)).all():
+							continue
+
+						b[b] = b[b] & (q > 0.0)
+
+					# idx = np.where(b)[0].astype(int)
+					# access[j] = idx
+					access[j] = idx[b]
+
 
 		return t, access
 
