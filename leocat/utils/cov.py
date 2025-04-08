@@ -78,7 +78,7 @@ def get_num_obs_eq(orb, period, swath):
 	# Q_solar = Dn/Tn # R/D, revs per nodal day
 	# Q_solar = 86400 / Tn # revs in 1 solar day
 	Q_solar = 86400 / Tn * 86400/Dn # revs in 1 solar day
-	swath_app = get_apparent_swath(orb, swath)
+	swath_app = get_apparent_swath(orb, swath, inverse=False)
 	num_obs_eq = Q_solar*period * swath_app/C * 2 # *2 for day/night
 	return num_obs_eq
 
@@ -93,6 +93,8 @@ def get_revisit(t_access_avg, num_pts, revisit_type='avg'):
 		# revisit exists
 		if revisit_type == 'avg':
 			revisit[key] = np.mean(np.diff(t_access))
+		elif revisit_type == 'std':
+			revisit[key] = np.std(np.diff(t_access))
 		elif revisit_type == 'max':
 			revisit[key] = np.max(np.diff(t_access))
 		elif revisit_type == 'min':
@@ -107,6 +109,183 @@ def get_num_obs(t_access_avg, num_pts):
 	for key in t_access_avg:
 		num_obs[key] = num_obs[key] + len(t_access_avg[key])
 	return num_obs
+
+
+def get_cst_dt_max_pt(t_vec, threshold=None, use_numba=False):
+	"""
+	Function dedicated just to determining dt_max or if
+	dt_max is greater than a given threshold, for a constellation.
+
+	If use_numba is False, just does standard numpy sort/concat,
+	then depends on option:
+	1. If calc dt_max
+		does standard max(diff(t))
+	2. If thresholding
+		iterates over t[k]-t[k-1] until threshold fails
+		at best, exits immediately
+		at worst, iterates over all revisits
+
+	If use_numba is True, tries a smart sort leveraging the
+	fact that each sat time-series is sorted
+	1. If calc dt_max
+		computes max(dt) sequentially
+	2. If thresholding
+		computes max(dt) until threshold fails
+		at best, exits immediately
+		at worst, iterates over all revisits
+
+	Runtime differences
+	If you're running this only once, use_numba=False is much
+	faster because numba has to compile which takes time.
+
+	However, if you're running this in a loop many times:
+	In general, use_numba=True is better for small time-series.
+	Upper-bound num obs for LEO sat w/16 days of coverage, which
+	meets typical revisit saturation, is ~56 avg. obs. globally.
+	For some reason, numba-based functions have worse complexity
+	than numpy but better overhead. So for small time-series, 
+	use_numba=True is better.
+
+	Input
+	List of access times for each satellite, for a given grid point.
+
+	Output
+	if threshold = None:
+		returns dt_max
+	else:
+		returns -1, 0, or 1, indicating
+		-1: max revisit doesn't exist, or num. obs. < 2
+		0: max revisit does not meet threshold
+		1: max revisit meets threshold
+
+	"""
+
+	if len(t_vec) == 1:
+		t = t_vec[0]
+		if threshold is None:
+			dt_max = np.max(np.diff(t))
+			return dt_max
+		else:
+			within_threshold = query_within_threshold_direct_numba(t, threshold)
+			if within_threshold:
+				return 1
+			else:
+				return 0
+
+	num = 0
+	for t_vec0 in t_vec:
+		num += len(t_vec0)
+	if num < 2:
+		if threshold is None:
+			return np.nan
+		else:
+			return -1
+
+	if not use_numba:
+		t = np.sort(np.concatenate(t_vec))
+		if threshold is None:
+			dt_max = np.max(np.diff(t))
+			return dt_max
+		else:
+			within_threshold = query_within_threshold_direct_numba(t, threshold)
+			if within_threshold:
+				return 1
+			else:
+				return 0
+
+	else:
+		if threshold is None:
+			return get_cst_dt_max_pt_numba(*t_vec)
+		else:
+			within_threshold = get_cst_dt_max_pt_threshold_numba(threshold, *t_vec)
+			if within_threshold:
+				return 1
+			else:
+				return 0
+
+@njit
+def query_within_threshold_direct_numba(t, threshold):
+	within_threshold = True
+	for k in range(1,len(t)):
+		if t[k]-t[k-1] > threshold:
+			within_threshold = False
+			break
+	return within_threshold
+
+
+@njit
+def get_cst_dt_max_pt_numba(*arrays):
+	# Initialize indices for all arrays
+	indices = [0] * len(arrays)
+	prev = None
+	max_diff = 0.0
+
+	while True:
+		# Find the array with the current smallest available value
+		min_val = None
+		min_idx = -1
+		for i, (arr, idx) in enumerate(zip(arrays, indices)):
+			if idx < len(arr):
+				val = arr[idx]
+				if min_val is None or val < min_val:
+					min_val = val
+					min_idx = i
+
+		# All arrays are exhausted
+		if min_idx == -1:
+			break
+
+		# Compute diff
+		if prev is not None:
+			max_diff = max(max_diff, min_val - prev)
+		prev = min_val
+
+		# Advance the index in the array that provided min_val
+		indices[min_idx] += 1
+
+	return max_diff
+
+
+@njit
+def get_cst_dt_max_pt_threshold_numba(threshold, *arrays):
+	# Initialize indices for all arrays
+	indices = [0] * len(arrays)
+	prev = None
+	max_diff = 0.0
+
+	within_threshold = True
+
+	# count = 0
+	while True:
+		# Find the array with the current smallest available value
+		min_val = None
+		min_idx = -1
+		for i, (arr, idx) in enumerate(zip(arrays, indices)):
+			if idx < len(arr):
+				val = arr[idx]
+				if min_val is None or val < min_val:
+					min_val = val
+					min_idx = i
+
+		# All arrays are exhausted
+		if min_idx == -1:
+			break
+
+		# Compute diff
+		if prev is not None:
+			max_diff = max(max_diff, min_val - prev)
+			if max_diff > threshold:
+				within_threshold = False
+				break
+		prev = min_val
+
+		# Advance the index in the array that provided min_val
+		indices[min_idx] += 1
+
+		# count += 1
+
+	return within_threshold #, count
+
 
 
 @njit
