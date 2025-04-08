@@ -161,6 +161,9 @@ def BT_coverage_init(orb, swath, lon, lat, JD1, JD2, verbose=0):
 
 def BT_coverage(t_access_init_total, index_total, orb, lon, lat, JD1, JD2, accuracy=0, verbose=0, GL=None):
 
+	if len(t_access_init_total) == 0:
+		return {}, {}
+
 	t_access_init_total = np.concatenate(t_access_init_total)
 	index_total = np.concatenate(index_total)
 
