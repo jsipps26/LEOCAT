@@ -17,8 +17,63 @@ apply shifts, then trim analytically via
 
 """
 
+def trim_swath(orb, swath, lon, lat, JD1, t_access):
 
-def trim_swath(orb, w_new, lon, lat, JD1, t_access, dt_sc=60.0):
+	from leocat.src.bt import J_NR, H_NR
+	from leocat.utils.orbit import get_GMST
+	# from leocat.utils.const import R_earth, R_earth_pole
+	# from leocat.cov import access_to_vector, vector_to_access
+
+	t_total, index = access_to_vector(t_access)
+	if len(t_total) == 0:
+		return t_access
+
+	phi = np.radians(lat)
+	phi_c = np.arctan((R_earth_pole/R_earth)**2 * np.tan(phi))
+	lam = rad(lon)[index]
+	phi = phi_c[index]
+
+	J = J_NR(t_total, orb, lam, phi, JD1)
+	H = H_NR(t_total, orb, lam, phi, JD1)
+	t_total = t_total - J/H
+
+	inc = orb.inc
+	j = 0
+	max_iter = 10
+	while j < max_iter:
+		OE = orb.propagate(t_total, return_OEs=True)
+		u = OE.T[-2] + OE.T[-1]
+		LAN = OE.T[3]
+		Lam = lam + rad(get_GMST(t_total/86400 + JD1)) - LAN
+		arg = np.cos(phi)*np.cos(Lam)/np.cos(u)
+		b_valid = np.abs(arg) <= 1.0
+		if not b_valid.all():
+			J = J_NR(t_total[~b_valid], orb, lam[~b_valid], phi[~b_valid], JD1)
+			H = H_NR(t_total[~b_valid], orb, lam[~b_valid], phi[~b_valid], JD1)
+			t_total[~b_valid] = t_total[~b_valid] - J/H
+		else:
+			break
+
+		j += 1
+
+	if j == max_iter:
+		import warnings
+		warnings.warn('Swath trim did not converge (fix_noise=1).')
+
+	# print('')
+	# print(len(b_valid), b_valid.sum())
+
+	dist = np.full(index.shape, np.nan)
+	dpsi = np.arccos(arg[b_valid])
+	dist[b_valid] = R_earth*dpsi
+	b = dist < swath/2
+
+	t_access_trim = vector_to_access(t_total[b], index[b])
+
+	return t_access_trim
+
+
+def trim_swath_GPA(orb, w_new, lon, lat, JD1, t_access, dt_sc=60.0):
 
 	from leocat.utils.math import interp, unit, dot
 	from leocat.utils.orbit import convert_ECI_ECF
