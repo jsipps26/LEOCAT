@@ -1,7 +1,7 @@
 
 import numpy as np
 from leocat.utils.orbit import Orbit, MLST_to_LAN
-from leocat.src.rgt import RepeatGroundTrack
+from leocat.src.rgt import RepeatGroundTrack, get_RGT_revs, get_RGT_alt
 from leocat.utils.const import *
 
 def LEO(alt, inc, e=0.0, LAN=0.0, omega=270.0, nu=90.0, propagator='SPE+frozen', warn=True):
@@ -12,6 +12,51 @@ def LEO(alt, inc, e=0.0, LAN=0.0, omega=270.0, nu=90.0, propagator='SPE+frozen',
 	nu = np.radians(nu)
 	orb = Orbit(a,e,inc,LAN,omega,nu,propagator=propagator,warn=warn)
 	return orb
+
+def LEO_MSSO(alt, num_cycles=1.0, e=0.0, LAN=0.0, omega=270.0, nu=90.0, propagator='SPE+frozen', warn=True):
+	"""
+	Generalization of SSO to multiple cycles
+	num_cycles is the number of times LAN rotates 360 deg. in a year
+		SSO condition is when num_cycles=1.0
+
+	"""
+	if not (propagator == 'SPE' or propagator == 'SPE+frozen'):
+		raise Exception('MSSO requires J2 perturbation, propagator must be one of: [SPE, SPE+frozen]')
+	mu = MU
+	J2 = 0.00108248
+	a = R_earth + alt
+	arg1 = -2*a**(7/2) * LAN_dot_SSO*num_cycles * (1-e**2)**2
+	arg2 = 3*R_earth**2 * J2 * np.sqrt(mu)
+	inc = np.arccos(arg1/arg2)
+
+	omega = np.radians(omega)
+	nu = np.radians(nu)
+	metadata = {'num_cycles': num_cycles}
+	orb = Orbit(a,e,inc,LAN,omega,nu,propagator=propagator, metadata=metadata, warn=warn)
+	return orb
+
+def LEO_RGT_MSSO(D, R, num_cycles=1.0, e=0.0, LAN=0.0, omega=270.0, nu=90.0, propagator='SPE+frozen', warn=True):
+	"""
+	Generalization of SSO to multiple cycles, under RGT constraint (D,R)
+	num_cycles is the number of times LAN rotates 360 deg. in a year
+		SSO condition is when num_cycles=1.0
+
+	"""
+	if not (propagator == 'SPE' or propagator == 'SPE+frozen'):
+		raise Exception('MSSO requires J2 perturbation, propagator must be one of: [SPE, SPE+frozen]')
+	RGT = RepeatGroundTrack(D,R,propagator=propagator)
+	a, inc = RGT.get_msso(num_cycles, e=e)
+	# LAN = RGT.get_sso_LAN(MLST,JD,e=e,direction=direction)
+
+	omega = np.radians(omega)
+	nu = np.radians(nu)
+	metadata = {'D': D, 'R': R, 'num_cycles': num_cycles}
+	orb = Orbit(a,e,inc,LAN,omega,nu,propagator=propagator, metadata=metadata, warn=warn)
+	return orb
+
+def LEO_MSSO_RGT(D, R, num_cycles=1.0, e=0.0, LAN=0.0, omega=270.0, nu=90.0, propagator='SPE+frozen', warn=True):
+	return LEO_RGT_MSSO(D, R, num_cycles=num_cycles, e=e, LAN=LAN, omega=omega, nu=nu, propagator=propagator, warn=warn)
+
 
 def LEO_SSO(alt, MLST, JD, direction='ascending', e=0.0, omega=270.0, nu=90.0, propagator='SPE+frozen', warn=True):
 	"""
