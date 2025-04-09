@@ -4,6 +4,86 @@ from leocat.utils.const import *
 from leocat.utils.orbit import Orbit, MLST_to_LAN, get_LAN_dot, convert_ECI_ECF
 from leocat.utils.geodesy import ecf_to_lla
 
+
+def get_RGT_alt(D, R_range, inc=None):
+	"""
+	This function gets the set of discrete
+	altitudes for a given number of revs
+
+	"""
+
+	alt_range = []
+	for R in R_range:
+		RGT = RepeatGroundTrack(D,R)
+		if inc is None:
+			a, _ = RGT.get_sso()
+		else:
+			a = RGT.get_a(np.radians(inc))
+		alt = a - R_earth
+		alt_range.append(alt)
+	alt_range = np.array(alt_range)
+	# alt_range = np.sort(alt_range)
+
+	return alt_range
+
+
+def get_RGT_revs(D, alt_min, alt_max, inc=None):
+	"""
+	This function finds all non-degenerate revs
+	R for an RGT s.t. alt_min < alt < alt_max.
+
+	If inc is None, SSO is assumed.
+
+	Circular orbit assumed, e=0.
+
+	"""
+
+	from leocat.utils.time import date_to_jd
+	from leocat.orb import LEO, LEO_SSO
+	from math import gcd
+
+	R_lim = []
+	for alt in [alt_min, alt_max]:
+		if inc is None:
+			MLST = 0.0
+			JD1 = date_to_jd(2021,1,1)
+			orb = LEO_SSO(alt, MLST, JD1)
+		else:
+			orb = LEO(alt, inc)
+		Dn = orb.get_nodal_day()
+		Tn = orb.get_period('nodal')
+
+		R0 = int(np.round(D*Dn/Tn))
+		R_lim.append(R0)
+	R_lim = np.array(R_lim)
+	R_min, R_max = np.sort(R_lim)
+
+	R_min = np.max([R_min-1,1])
+	R_max = R_max+1
+	R_vec = np.arange(R_min,R_max+1)
+	R_range = []
+	for R in R_vec:
+		g = gcd(R,D)
+		R_new = R//g
+		D_new = D//g
+		if g > 1:
+			continue
+		RGT = RepeatGroundTrack(D,R)
+		if inc is None:
+			a, _ = RGT.get_sso()
+		else:
+			a = RGT.get_a(np.radians(inc))
+		alt = a - R_earth
+		if not (alt_min < alt < alt_max):
+			continue
+		R_range.append(R)
+
+	R_range = np.array(R_range)
+	R_range = np.flip(np.sort(R_range))
+
+	return R_range
+
+
 class RepeatGroundTrack:
 	def __init__(self, D, R, propagator='SPE+frozen', warn=True):
 		self.D = D
@@ -118,6 +198,30 @@ class RepeatGroundTrack:
 			inc_est = inc_est_new
 
 		return a_est, inc_est
+
+
+	def get_msso(self, num_cycles=1.0, e=0.0, max_iter=10, tol=1e-12):
+
+		inc_est = np.radians(98.2) # initial guess
+		LAN_dot = LAN_dot_SSO * num_cycles
+
+		i = 0
+		while i < max_iter:
+			a_est = self.get_a(inc_est, e)
+			# ut.pause()
+
+			arg1 = -2*a_est**(7/2) * LAN_dot * (1-e**2)**2
+			arg2 = 3*R_earth**2 * J2 * np.sqrt(MU)
+			inc_est_new = np.arccos(arg1 / arg2)
+
+			if np.abs(inc_est_new - inc_est) < tol:
+				break
+
+			i += 1
+			inc_est = inc_est_new
+
+		return a_est, inc_est
+
 
 
 	def get_sso_LAN(self, MLST, JD, e=0.0, direction='ascending'):
