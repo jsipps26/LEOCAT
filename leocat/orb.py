@@ -31,6 +31,7 @@ def LEO_MSSO(alt, num_cycles=1.0, e=0.0, LAN=0.0, omega=270.0, nu=90.0, propagat
 
 	omega = np.radians(omega)
 	nu = np.radians(nu)
+	LAN = np.radians(LAN)
 	metadata = {'num_cycles': num_cycles}
 	orb = Orbit(a,e,inc,LAN,omega,nu,propagator=propagator, metadata=metadata, warn=warn)
 	return orb
@@ -47,6 +48,7 @@ def LEO_RGT_MSSO(D, R, num_cycles=1.0, e=0.0, LAN=0.0, omega=270.0, nu=90.0, pro
 	RGT = RepeatGroundTrack(D,R,propagator=propagator)
 	a, inc = RGT.get_msso(num_cycles, e=e)
 	# LAN = RGT.get_sso_LAN(MLST,JD,e=e,direction=direction)
+	LAN = np.radians(LAN)
 
 	omega = np.radians(omega)
 	nu = np.radians(nu)
