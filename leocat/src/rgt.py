@@ -5,7 +5,24 @@ from leocat.utils.orbit import Orbit, MLST_to_LAN, get_LAN_dot, convert_ECI_ECF
 from leocat.utils.geodesy import ecf_to_lla
 
 
-def get_RGT_alt(D, R_range, inc=None):
+def check_inc_type(inc, num_cycles):
+
+	inc_prescribed = False
+	if inc is not None:
+		inc_prescribed = True
+
+	num_cycles_prescribed = False
+	if num_cycles is not None:
+		num_cycles_prescribed = True
+
+	if inc_prescribed and num_cycles_prescribed:
+		raise Exception('Either prescribe inc or num_cycles, not both')
+
+	return inc_prescribed, num_cycles_prescribed
+
+
+
+def get_RGT_alt(D, R_range, inc=None, num_cycles=1.0):
 	"""
 	This function gets the set of discrete
 	altitudes for a given number of revs
@@ -16,7 +33,7 @@ def get_RGT_alt(D, R_range, inc=None):
 	for R in R_range:
 		RGT = RepeatGroundTrack(D,R)
 		if inc is None:
-			a, _ = RGT.get_sso()
+			a, _ = RGT.get_msso(num_cycles)
 		else:
 			a = RGT.get_a(np.radians(inc))
 		alt = a - R_earth
@@ -27,7 +44,7 @@ def get_RGT_alt(D, R_range, inc=None):
 	return alt_range
 
 
-def get_RGT_revs(D, alt_min, alt_max, inc=None):
+def get_RGT_revs(D, alt_min, alt_max, inc=None, num_cycles=1.0):
 	"""
 	This function finds all non-degenerate revs
 	R for an RGT s.t. alt_min < alt < alt_max.
@@ -39,15 +56,13 @@ def get_RGT_revs(D, alt_min, alt_max, inc=None):
 	"""
 
 	from leocat.utils.time import date_to_jd
-	from leocat.orb import LEO, LEO_SSO
+	from leocat.orb import LEO, LEO_SSO, LEO_MSSO
 	from math import gcd
 
 	R_lim = []
 	for alt in [alt_min, alt_max]:
 		if inc is None:
-			MLST = 0.0
-			JD1 = date_to_jd(2021,1,1)
-			orb = LEO_SSO(alt, MLST, JD1)
+			orb = LEO_MSSO(alt, num_cycles)
 		else:
 			orb = LEO(alt, inc)
 		Dn = orb.get_nodal_day()
@@ -70,7 +85,7 @@ def get_RGT_revs(D, alt_min, alt_max, inc=None):
 			continue
 		RGT = RepeatGroundTrack(D,R)
 		if inc is None:
-			a, _ = RGT.get_sso()
+			a, _ = RGT.get_msso(num_cycles)
 		else:
 			a = RGT.get_a(np.radians(inc))
 		alt = a - R_earth
