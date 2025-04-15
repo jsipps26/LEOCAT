@@ -59,6 +59,7 @@ def trim_swath(orb, swath, lon, lat, JD1, t_access):
 	if j == max_iter:
 		import warnings
 		warnings.warn(f'Swath trim did not converge ({(~b_valid).sum()}/{len(b_valid)} pts failed).')
+		sys.stderr.flush()
 
 	# print('')
 	# print(len(b_valid), b_valid.sum())
