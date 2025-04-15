@@ -20,10 +20,12 @@ def LEO_MSSO(alt, num_cycles=1.0, e=0.0, LAN=0.0, omega=270.0, nu=90.0, propagat
 		SSO condition is when num_cycles=1.0
 
 	"""
+	from leocat.utils.const import R_earth, MU, LAN_dot_SSO, J2
+
 	if not (propagator == 'SPE' or propagator == 'SPE+frozen'):
 		raise Exception('MSSO requires J2 perturbation, propagator must be one of: [SPE, SPE+frozen]')
 	mu = MU
-	J2 = 0.00108248
+	# J2 = 0.00108248
 	a = R_earth + alt
 	arg1 = -2*a**(7/2) * LAN_dot_SSO*num_cycles * (1-e**2)**2
 	arg2 = 3*R_earth**2 * J2 * np.sqrt(mu)
