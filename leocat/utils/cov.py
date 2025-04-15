@@ -12,6 +12,77 @@ from leocat.utils.geodesy import ev_direct, ev_inverse
 
 from numba import njit
 
+def get_lat_GT_max(orb):
+	inc = np.degrees(orb.inc)
+	lat_GT_max = inc
+	if lat_GT_max > 90:
+		lat_GT_max = 180 - lat_GT_max
+	return lat_GT_max
+
+
+def get_num_obs_lat(orb, swath, num_days, lat):
+
+	"""
+	Analytic avg. number of obs given orb/swath and number
+	of days of simulation, for a given latitude. 
+
+	"""
+	from leocat.src.bt import get_dlon_lons, get_swath_params, classify_bridges
+	from leocat.utils.time import date_to_jd
+
+	scalar = 0
+	if not isinstance(lat, np.ndarray):
+		lat = np.array(lat)
+		if len(lat.shape) == 0:
+			# scalar
+			scalar = 1
+			lat = np.array([lat])
+
+	Tn = orb.get_period('nodal')
+	Dn = orb.get_nodal_day()
+	dlon = 360*Tn/Dn
+
+	lat_GT_max = get_lat_GT_max(orb)
+	dlat_swath = swath/R_earth * 180/np.pi # both sides, deg
+	lat_peak = lat_GT_max - dlat_swath/2
+
+	JD1 = date_to_jd(2021,1,1)
+
+	period = num_days
+	num_obs_lat = np.zeros(lat.shape)
+	for i,lat0 in enumerate(lat):
+		lons0, us0, ts0, split, invalid_left, invalid_right, lat_in_bounds, pole_in_view = \
+			get_swath_params(orb, lat0, swath, JD1, verbose=0)
+		#
+		bridge_class1, bridge_class2, lons0, us0, ts0 = \
+			classify_bridges(lons0, us0, ts0, orb, lat0, split, invalid_left, invalid_right, lat_in_bounds)
+		#
+		dlon_lat = get_dlon_lons(lons0, bridge_class1)
+		# if np.abs(lat0) < 2.0:
+		# 	print(lat0, lons0, bridge_class1, dlon_lat)
+		# 	pause()
+
+		radius_perp = R_earth * np.cos(np.radians(lat0))
+		swath_app = radius_perp*np.radians(dlon_lat)
+		C = 2*np.pi*radius_perp
+		Q_solar = 86400/Tn * 86400/Dn # revs in 1 solar day
+		# Q_solar = Dn/Tn
+		num_obs_lat0 = Q_solar*period * swath_app/C * 2 # *2 for asc/desc
+		if bridge_class1 == 3 and not pole_in_view:
+			# factor to adjust equator, only approx
+			# 	single revs do not completely cover equator
+			num_obs_lat0 = num_obs_lat0 / (1+dlon*np.cos(orb.inc)/360.0)
+
+		if (lat0 < -lat_peak) or (lat0 > lat_peak):
+			num_obs_lat0 = num_obs_lat0 / 2.0 # no asc/desc, above lat_GT_max
+
+		num_obs_lat[i] = num_obs_lat0
+
+	if scalar:
+		return num_obs_lat[0]
+	else:
+		return num_obs_lat
+
 
 def get_wall_to_wall_swath(orb):
 	# Swath s.t. equator exactly covered

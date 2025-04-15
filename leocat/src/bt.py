@@ -883,7 +883,30 @@ def plot_debug_figure(lon, lat, orb, swath, JD1, lons0, ts0, us0, Tn, dlon, k_ac
 
 
 
+def get_dlon_lons(lons0, bridge_class1):
 
+	"""
+	classifications
+		0 - not classified
+		1 - left-to-right
+		2 - right-to-left
+		3 - all covered
+		4 - none covered
+	"""
+	lon_l1, lon_r1 = lons0['l1'], lons0['r1']
+	# lon_l2, lon_r2 = lons0['l2'], lons0['r2']
+
+	dlon_lat = 0.0 # class 4
+	if bridge_class1 == 1:
+		dlon_lat = (lon_r1-lon_l1) % 360.0
+	elif bridge_class1 == 2:
+		dlon_lat = (lon_l1-lon_r1) % 360.0
+	elif bridge_class1 == 3:
+		dlon_lat = 360.0
+
+	return dlon_lat
+
+	
 
 def classify_bridges(lons0, us0, ts0, orb, lat, split, invalid_left, invalid_right, lat_in_bounds):
 	#
