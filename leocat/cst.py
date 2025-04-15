@@ -25,7 +25,7 @@ class ConstellationShell:
 		self.nu_shifts = nu_shifts
 
 	def get_access(self, verbose=2, approx=True, res=None, alpha=0.25, lon=None, lat=None, \
-					fix_noise=True):
+					fix_noise=True, return_t_access_buf=False, t_access_buf=None):
 		#
 		"""
 		Assuming you always want snap-to-grid
@@ -108,7 +108,6 @@ class ConstellationShell:
 				lon_buf, lat_buf, t_access_buf = get_coverage(orb_buf, w_approx, JD1_buffer, JD2_buffer, \
 													res=res, verbose=verbose, lon=lon, lat=lat)
 				#
-
 				t1_epoch = (JD1-JD1_buffer)*86400
 				t2_epoch = (JD2-JD1_buffer)*86400
 				t_access = trim_time(t_access_buf, t1_epoch, t2_epoch, time_shift=-t1_epoch)
@@ -195,9 +194,18 @@ class ConstellationShell:
 				JD2_buffer = JD2 + Tn/86400
 				orb_buf = deepcopy(orb)
 				orb_buf.propagate_epoch((JD1_buffer-JD1)*86400, reset_epoch=True)
-				lon_buf, lat_buf, t_access_buf = get_coverage(orb_buf, w_approx, JD1_buffer, JD2_buffer, \
-													res=res, verbose=verbose, lon=lon_extents, lat=lat_extents)
-				#
+				if t_access_buf is None:
+					# print('t_access_buf was not input')
+					lon_buf, lat_buf, t_access_buf = get_coverage(orb_buf, w_approx, JD1_buffer, JD2_buffer, \
+														res=res, verbose=verbose, lon=lon_extents, lat=lat_extents)
+					#
+					if return_t_access_buf:
+						return t_access_buf, orb_buf, lon_buf, lat_buf, JD1_buffer 
+
+				# else:
+				# 	print('t_access_buf was input')
+
+
 				t1_epoch = (JD1-JD1_buffer)*86400
 				t2_epoch = (JD2-JD1_buffer)*86400
 				# t_access = trim_time(t_access_buf, t1_epoch, t2_epoch, time_shift=-t1_epoch)
