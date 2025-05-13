@@ -374,6 +374,10 @@ class RepeatGroundTrack:
 		if w is None:
 			w = Sd_km # distance between adjacent tracks, km
 		w_app = w / np.sin(inc_app)
+		# w_app = get_apparent_swath()
+		# arg = np.abs(np.sin(orb.inc) / (np.cos(orb.inc) - 1/Q))
+		# inc_app = np.arctan(arg)
+
 		# print(w_app)
 		if w_app >= 2*Sd_km:
 			n = int(w_app/(2*Sd_km))

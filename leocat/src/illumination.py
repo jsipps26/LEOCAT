@@ -1095,6 +1095,7 @@ class GroundTrackIllumination():
 		R_inc = R1(inc)
 		R_omega = R3(omega)
 		R_313 = R_LAN @ (R_inc @ R_omega)
+		self.R_313 = R_313
 
 		p_hat = R_313[:,:,0]
 		h_hat = R_313[:,:,2]
