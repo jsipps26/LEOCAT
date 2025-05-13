@@ -249,6 +249,20 @@ def add_colorbar(fig, ax, im, label=None, offset=0.065):
 	return cbar
 
 
+def add_plus_to_colorbar(fig, cbar):
+	import warnings
+	fig.canvas.draw()
+	ticks = cbar.get_ticks()
+	i_max = np.where(ticks < cbar.vmax)[0][-1]
+	tick_labels = [label.get_text() for label in cbar.ax.get_yticklabels()]
+	tick_labels[i_max] = tick_labels[i_max] + '+'
+	# cbar.set_ticks(ticks)
+	# cbar.ax.yaxis.set_major_locator(ticker.FixedLocator(ticks[:i_max+1]))
+	with warnings.catch_warnings():
+		warnings.simplefilter('ignore', UserWarning)
+		cbar.ax.set_yticklabels(tick_labels)
+
+
 def plot_circles(ax, x, y, s=25, edgecolors='r', *args):
 	ax.scatter(x, y, s=s, facecolors='none', edgecolors=edgecolors, *args)
 
