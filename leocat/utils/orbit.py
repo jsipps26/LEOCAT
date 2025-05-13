@@ -31,6 +31,163 @@ Vallado, D., "Fundamentals of Astrodynamics and Applications", version 4
 # 	JD = date_to_jd(year, month, day + hour/24 + minute/(24*60) + sec/(24*60*60))
 # 	return JD
 
+def get_launch_dv(lat, alt, inc_deg):
+	"""
+	Heavily simplified launch delta-v
+	Calc only change in dv from Earth's surface at a 
+	given latitude to orbit velocity
+
+	Circular orbits only
+
+	"""
+
+	from leocat.utils.time import date_to_jd
+	from leocat.utils.geodesy import RADEC_to_cart
+	from leocat.utils.math import arcsin
+
+	lon = 0.0
+	inc = np.radians(inc_deg)
+	a = R_earth + alt
+	e = 0.0
+
+	JD1 = date_to_jd(2021,1,1)
+	k_hat = np.array([0,0,1])
+
+	r_launch_ecf_hat = RADEC_to_cart(lon, lat)
+	r_launch_ecf = R_earth * r_launch_ecf_hat
+	v_launch_ecf = np.zeros(3)
+	r_launch_eci, v_launch_eci = \
+		convert_ECF_ECI(np.array([JD1]), np.array([r_launch_ecf]), np.array([v_launch_ecf]))
+	r_launch_eci, v_launch_eci = r_launch_eci[0], v_launch_eci[0]
+	r_orb = r_launch_eci / R_earth * (R_earth + alt)
+
+	phi = np.radians(lat)
+	if inc == 0.0 or inc == -180.0:
+		raise Exception('Equatorial pro/retrograde orbits not handled yet')
+	arg = np.sin(phi)/np.sin(inc)
+	if np.abs(arg) > 1.0:
+		raise Exception('Inclination must be outside latitude of launch site')
+	# u = np.arcsin(arg)
+	u1, u2 = arcsin(arg)
+	# could try u1 and u2
+	#	find best LAN for each
+
+	eps = 1e-6
+
+	u_vec = np.array([u1,u2])
+	LAN_vec = []
+	for u in u_vec:
+		nu = u
+		omega = 0.0
+		r_mag = a*(1-e**2) / (1 + e*np.cos(nu))
+		vec = R1(inc) @ R3(omega) @ np.array([r_mag*np.cos(nu), r_mag*np.sin(nu), 0.0])
+		x, y, z = r_orb
+		cx, cy, cz = vec
+		c = cx + cy
+		ux, uy = x+y, y-x
+		u = np.sqrt(ux**2 + uy**2)
+		c = cx + cy
+		arg = c/u
+		alpha = np.arctan2(ux,uy)
+		LAN1, LAN2 = arcsin(arg, offset=alpha)
+
+		r1 = R3(LAN1) @ vec
+		r2 = R3(LAN2) @ vec
+		dr = np.array([mag(r1-r_orb),mag(r2-r_orb)])
+		j = np.argmin(dr)
+		LAN = np.array([LAN1,LAN2])[j]
+		if not (dr < eps).any():
+			print(f'warning (1): dr not less than {eps:e}')
+
+		LAN_vec.append(LAN)
+
+	LAN_vec = np.array(LAN_vec)
+
+	u1, u2 = u_vec
+	LAN1, LAN2 = LAN_vec
+
+	orb1 = Orbit(a, e, inc, LAN1, 0.0, u1)
+	orb2 = Orbit(a, e, inc, LAN2, 0.0, u2)
+	r1 = orb1.r
+	r2 = orb2.r
+
+	dr_vec = np.array([mag(r1-r_orb), mag(r2-r_orb)])
+	if not (dr_vec < eps).all():
+		print(f'warning (2): dr not less than {eps:e}')
+
+	v1 = orb1.v
+	v2 = orb2.v
+	dv1 = mag(v1 - v_launch_eci)
+	dv2 = mag(v2 - v_launch_eci)
+	dv = np.min([dv1,dv2])
+
+	return orb1, orb2, dv
+
+
+	# lon = 0.0
+	# inc = np.radians(inc_deg)
+	# a = R_earth + alt
+	# e = 0.0
+
+	# JD1 = date_to_jd(2021,1,1)
+	# k_hat = np.array([0,0,1])
+
+	# r_launch_ecf_hat = RADEC_to_cart(lon, lat)
+	# r_launch_ecf = R_earth * r_launch_ecf_hat
+	# v_launch_ecf = np.zeros(3)
+	# r_launch_eci, v_launch_eci = \
+	# 	convert_ECF_ECI(np.array([JD1]), np.array([r_launch_ecf]), np.array([v_launch_ecf]))
+	# r_launch_eci, v_launch_eci = r_launch_eci[0], v_launch_eci[0]
+	# r_orb = r_launch_eci / R_earth * (R_earth + alt)
+
+	# phi = np.radians(lat)
+	# if inc == 0.0 or inc == -180.0:
+	# 	raise Exception('Equatorial pro/retrograde orbits not handled yet')
+	# arg = np.sin(phi)/np.sin(inc)
+	# if np.abs(arg) > 1.0:
+	# 	raise Exception('Inclination must be outside latitude of launch site')
+	# u = np.arcsin(arg)
+
+	# nu = u
+	# omega = 0.0
+	# r_mag = a*(1-e**2) / (1 + e*np.cos(nu))
+	# vec = R1(inc) @ R3(omega) @ np.array([r_mag*np.cos(nu), r_mag*np.sin(nu), 0.0])
+	# x, y, z = r_orb
+	# cx, cy, cz = vec
+	# c = cx + cy
+	# ux, uy = x+y, y-x
+	# u = np.sqrt(ux**2 + uy**2)
+	# c = cx + cy
+	# arg = c/u
+	# alpha = np.arctan2(ux,uy)
+	# LAN1, LAN2 = arcsin(arg, offset=alpha)
+
+	# r1 = R3(LAN1) @ vec
+	# r2 = R3(LAN2) @ vec
+	# dr = np.array([mag(r1-r_orb),mag(r2-r_orb)])
+	# j = np.argmin(dr)
+	# LAN = np.array([LAN1,LAN2])[j]
+
+	# print(dr)
+
+	# eps = 1e-6
+	# if not (dr < eps).any():
+	# 	print(f'warning: dr not less than {eps:e}')
+
+	# # orb1 = Orbit(a, e, inc, LAN, omega, nu)
+	# # orb2 = Orbit(a, e, inc, LAN+np.pi, omega, np.pi-nu)
+	# # v_orb1 = orb1.v
+	# # v_orb2 = orb2.v
+
+	# # dv1 = mag(v_orb1 - v_launch_eci)
+	# # dv2 = mag(v_orb2 - v_launch_eci)
+	# # dv = np.min([dv1,dv2])
+	# orb = Orbit(a, e, inc, LAN, omega, nu)
+	# dv = mag(orb.v - v_launch_eci)
+
+	# return orb1, orb2, dv
+
+
 
 def read_GMAT_oem(file, num_lines=None):
 
