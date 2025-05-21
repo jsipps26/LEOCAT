@@ -266,12 +266,12 @@ def add_plus_to_colorbar(fig, cbar):
 def plot_circles(ax, x, y, s=25, edgecolors='r', *args):
 	ax.scatter(x, y, s=s, facecolors='none', edgecolors=edgecolors, *args)
 
-def plot_axes(ax, L=1.0, R=None):
+def plot_axes(ax, L=1.0, R=None, zorder=None):
 	if R is None:
 		R = np.eye(3)*L
-	draw_vector(ax,[0,0,0],R[0],'r')
-	draw_vector(ax,[0,0,0],R[1],[0,0.9,0])
-	draw_vector(ax,[0,0,0],R[2],'b')
+	draw_vector(ax,[0,0,0],R[0],'r',zorder=zorder)
+	draw_vector(ax,[0,0,0],R[1],[0,0.9,0],zorder=zorder)
+	draw_vector(ax,[0,0,0],R[2],'b',zorder=zorder)
 
 
 def pcolormesh(zz, xx=None, yy=None):
