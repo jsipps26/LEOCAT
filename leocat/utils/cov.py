@@ -12,6 +12,31 @@ from leocat.utils.geodesy import ev_direct, ev_inverse
 
 from numba import njit
 
+
+
+def elev_angle_to_FOV(theta0, alt):
+	# source [52]
+	# Orbital Mechanics, edited by Vladimir A. Chobotov, American Institute of Aeronautics and Astronautics, 2002
+	arg = np.cos(np.radians(theta0)) / (1 + alt/R_earth)
+	if np.abs(arg) <= 1.0:
+		eta = np.arcsin(arg)
+	else:
+		return np.nan
+	FOV = np.degrees(eta) * 2 # deg
+	return FOV
+
+def FOV_to_elev_angle(FOV, alt):
+	# source [52]
+	# Orbital Mechanics, edited by Vladimir A. Chobotov, American Institute of Aeronautics and Astronautics, 2002
+	eta = np.radians(FOV) / 2
+	arg = np.sin(eta) * (1 + alt/R_earth)
+	if np.abs(arg) <= 1.0:
+		theta0 = np.arccos(arg)
+	else:
+		return np.nan
+	return np.degrees(theta0)
+
+
 def get_lat_GT_max(orb):
 	inc = np.degrees(orb.inc)
 	lat_GT_max = inc
