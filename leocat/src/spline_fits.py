@@ -24,6 +24,21 @@ def get_roots_mid(roots):
 	roots_mid = np.array(roots_mid)
 	return roots_mid
 
+def swath_to_num_intp0(swath):
+	"""
+	For SSO at 705 km alt
+	16-day simulation period
+	"""
+	x1, x2 = 108.46, 2087.05
+	y1, y2 = 30.25, 15.05
+	log_x1 = np.log10(108.46)
+	log_x2 = np.log10(2087.05)
+	m = (y2-y1)/(log_x2-log_x1)
+	x = swath
+	num_intp = m*(np.log10(x)-log_x1) + y1
+	return num_intp
+	
+
 class SplineCoverage:
 	def __init__(self, orb, swath, lon, lat, JD1, JD2):
 		self.orb = orb
