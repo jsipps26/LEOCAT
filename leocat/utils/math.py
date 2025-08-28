@@ -4,6 +4,21 @@ import numpy as np
 from leocat.utils.index import hash_index
 
 
+def angle_between(u_test, u1, u2, equal=True, radians=True):
+	mod_operator = 2*np.pi
+	if not radians:
+		mod_operator = 360.0
+	du = (u2-u1) % mod_operator
+	du_test = (u_test-u1) % mod_operator
+	if not equal:
+		if 0.0 < du_test < du:
+			return True
+	else:
+		if 0.0 <= du_test <= du:
+			return True
+	return False
+
+
 def angle_in_region(theta0, theta1, theta2):
 	theta0 = theta0 % (2*np.pi)
 	theta1 = theta1 % (2*np.pi)
