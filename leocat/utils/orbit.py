@@ -1537,6 +1537,56 @@ def solar_elev(lon, lat, JD, R_ECI_ECF=None, positive=False, mean_sun=False):
 	return elev
 
 
+
+def solar_elev_spherical(lon, lat, JD, R_ECI_ECF=None, positive=False, mean_sun=False):
+
+	# single_value = 0
+	# if not (type(lon) is np.ndarray):
+	# 	single_value = 1
+	# 	lon = np.array([lon])
+	# 	lat = np.array([lat])
+	# 	JD = np.array([JD])
+	# 	if R_ECI_ECF is not None:
+	# 		R_ECI_ECF = np.array([R_ECI_ECF])
+
+	# r_ecf = lla_to_ecf(lon, lat, np.zeros(lon.shape)) # km
+
+
+	from leocat.utils.geodesy import RADEC_to_cart
+
+	r_ecf = RADEC_to_cart(lon, lat) # km
+	if R_ECI_ECF is None:
+		R_ECI_ECF = get_R_ECI_ECF_GMST(JD)
+
+	R_ECF_ECI = np.transpose(R_ECI_ECF, axes=(0,2,1))
+
+	r_eci = matmul(R_ECF_ECI, r_ecf) # km
+	r_sun = solar_pos_approx(JD) # km
+
+	if mean_sun:
+		s_eci = r_sun
+		s_ecf_xy = matmul(R_ECI_ECF, s_eci)
+		s_ecf_xy.T[2] = 0.0
+		r_sun_xy = (s_ecf_xy.T / np.linalg.norm(s_ecf_xy,axis=1)).T * R_earth
+		r_sun = matmul(R_ECF_ECI, r_sun_xy)
+
+	z_hat = (r_eci.T / np.linalg.norm(r_eci, axis=1)).T # up, geocentric
+	s_hat = (r_sun.T / np.linalg.norm(r_sun, axis=1)).T # towards sun
+
+	proj_sun = np.einsum('ij,ij->i', z_hat, s_hat) # ut.dot
+	proj_sun[proj_sun > 1.0] = 1.0
+	proj_sun[proj_sun < -1.0] = -1.0
+	angle = np.arccos(proj_sun) * 180/np.pi
+	elev = 90.0 - angle
+	if positive:
+		elev[proj_sun <= 0] = 0.0 # invalid angle, below horizon
+
+	# if single_value:
+	# 	elev = elev[0]
+
+	return elev
+
+
 def solar_pos_approx(JD, return_lon_eclip=False):
 
 	# position in km from Earth at JD
