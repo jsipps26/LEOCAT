@@ -36,13 +36,26 @@ def FOV_to_elev_angle(FOV, alt):
 		return np.nan
 	return np.degrees(theta0)
 
-
 def get_lat_GT_max(orb):
 	inc = np.degrees(orb.inc)
 	lat_GT_max = inc
 	if lat_GT_max > 90:
 		lat_GT_max = 180 - lat_GT_max
 	return lat_GT_max
+
+def get_lat_extent(orb, swath=0.0):
+	inc = np.degrees(orb.inc)
+	# lat_GT_max = inc
+	# if lat_GT_max > 90:
+	# 	lat_GT_max = 180 - lat_GT_max
+	lat_GT_max = get_lat_GT_max(orb)
+	lat_extent = lat_GT_max
+	if swath > 0.0:
+		dlat = swath / R_earth * 180/np.pi
+		lat_extent = lat_GT_max + dlat/2
+		if lat_extent > 90.0:
+			lat_extent = 90.0
+	return lat_extent
 
 
 def get_num_obs_lat(orb, swath, num_days, lat):
