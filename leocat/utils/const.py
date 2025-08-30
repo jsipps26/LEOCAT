@@ -3,6 +3,7 @@
 from math import pi
 import os, sys
 
+TWO_PI = 2*np.pi
 LON_ORIGIN, LAT_ORIGIN = -180, -90
 
 # EPSG_LLA = 4326
