@@ -317,7 +317,7 @@ def get_init_t_access_numba(t_r1, t_l1, t_r2, t_l2, lon_r1, lon_l1, lon_r2, lon_
 	# t_r1, t_l1, t_r2, t_l2 = ts0['r1'], ts0['l1'], ts0['r2'], ts0['l2']
 	# lon_r1, lon_l1, lon_r2, lon_l2 = lons0['r1'], lons0['l1'], lons0['r2'], lons0['l2']
 	# t_access = np.array([], dtype=types.float64)
-	if invalid_left and invalid_right:
+	if invalid_left and invalid_right or bridge_class1 == 3:
 		if lat_in_bounds:
 			# always accessed
 			#	then what is the time of access..?
@@ -425,7 +425,7 @@ def get_init_t_access(t_r1, t_l1, t_r2, t_l2, lon_r1, lon_l1, lon_r2, lon_l2, in
 	# t_r1, t_l1, t_r2, t_l2 = ts0['r1'], ts0['l1'], ts0['r2'], ts0['l2']
 	# lon_r1, lon_l1, lon_r2, lon_l2 = lons0['r1'], lons0['l1'], lons0['r2'], lons0['l2']
 	t_access = np.array([])
-	if invalid_left and invalid_right:
+	if invalid_left and invalid_right or bridge_class1 == 3:
 		if lat_in_bounds:
 			# always accessed
 			#	then what is the time of access..?
@@ -1019,6 +1019,37 @@ def classify_bridges(lons0, us0, ts0, orb, lat, split, invalid_left, invalid_rig
 		# 	# if lat=0, then both are invalid or swath=0
 		# 	import warnings
 		# 	warnings.warn('invalid_left OR invalid_right and lat=0')
+
+		if 1:
+			"""
+			Check edge-case: wrap beyond 360 deg.
+			At very specific lats/incs near retrograde,
+			swath envelope covers itself in one rev, so
+			there are intersections but the entire band
+			of latitude is covered. No angle wrapping can
+			handle >360 deg. coverage, so we instead set
+			bridge_class1 = 3 -> goes to Case (e), full-band
+			coverage near equator.
+				No longer uses k_access despite lons0 existing
+
+			"""
+			if bridge_class1 == 1: # left-to-right
+				lon1, lon2 = lons0['l1'], lons0['r1']
+				dt_w = ts0['r1']-ts0['l1']
+			elif bridge_class1 == 2: # right-to-left
+				lon1, lon2 = lons0['r1'], lons0['l1']
+				dt_w = ts0['l1']-ts0['r1']
+
+			# dlon_w = np.degrees(orb.get_LAN_dot() + W_EARTH) * dt_w
+			dlon_w = np.degrees(W_EARTH) * dt_w
+			lon1_st = lon1
+			lon2_st = lon2 + dlon_w
+			dlon_st = (lon2_st-lon1_st) % 360.0
+			total_wrap = dlon_st - dlon_w
+			if total_wrap >= 360.0:
+				bridge_class1 = 3
+				# bridge_class2 = 0 # already set
+
 
 	else:
 		"""
