@@ -883,7 +883,7 @@ def plot_debug_figure(lon, lat, orb, swath, JD1, lons0, ts0, us0, Tn, dlon, k_ac
 
 
 
-def get_dlon_lons(orb, lons0, bridge_class1):
+def get_dlon_lons(orb, lons0, bridge_class1, pole_in_view):
 
 	"""
 	classifications
@@ -902,20 +902,27 @@ def get_dlon_lons(orb, lons0, bridge_class1):
 	elif bridge_class1 == 2:
 		dlon_lat = (lon_l1-lon_r1) % 360.0
 	elif bridge_class1 == 3:
-		# approximation of near-equatorial inc
-		#	exact from Eq. 3.17/3.18
-		# angle_rate is approx for i ~ 0 or i ~ 180 deg.
-		#	taken from get_init_t_access
-		inc = orb.inc
-		omega_dot = orb.get_omega_dot()
-		M_dot = orb.get_M_dot()
-		LAN_dot = orb.get_LAN_dot()
-		Tn = orb.get_period('nodal')
-		if inc <= np.pi/2:
-			angle_rate = (omega_dot + M_dot) - (W_EARTH - LAN_dot)
+		if pole_in_view:
+			# Case (d)
+			# Still approx but very close
+			#	earth spins over duration of polar access
+			dlon_lat = 360.0
 		else:
-			angle_rate = -(omega_dot + M_dot) - (W_EARTH - LAN_dot)
-		dlon_lat = np.degrees(np.abs(angle_rate)) * Tn
+			# Case (e)
+			# Approximation of near-equatorial inc
+			#	exact from Eq. 3.17/3.18
+			# angle_rate is approx for i ~ 0 or i ~ 180 deg.
+			#	taken from get_init_t_access
+			inc = orb.inc
+			omega_dot = orb.get_omega_dot()
+			M_dot = orb.get_M_dot()
+			LAN_dot = orb.get_LAN_dot()
+			Tn = orb.get_period('nodal')
+			if inc <= np.pi/2:
+				angle_rate = (omega_dot + M_dot) - (W_EARTH - LAN_dot)
+			else:
+				angle_rate = -(omega_dot + M_dot) - (W_EARTH - LAN_dot)
+			dlon_lat = np.degrees(np.abs(angle_rate)) * Tn
 
 
 	return dlon_lat
