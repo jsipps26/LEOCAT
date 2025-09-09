@@ -7,6 +7,7 @@ from leocat.src.bt import AnalyticCoverage
 from leocat.src.ssc import SmallSwathCoverage
 from leocat.src.spline_fits import SplineCoverage
 from leocat.src.field_map import FieldMapCoverage
+from leocat.src.lat_cov import LatitudeCoverage
 from leocat.src.swath import SwathEnvelope
 from leocat.src.fpt import Satellite, Instrument # WIP
 
