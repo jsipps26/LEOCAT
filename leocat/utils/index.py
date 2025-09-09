@@ -5,6 +5,53 @@ from numba.core import types
 from numba.typed import Dict
 
 
+@njit
+def mask_intervals_numba(A, B):
+	# Convert list of intervals to a flattened NumPy array for efficient processing
+	# if not (type(A) is np.ndarray):
+	# 	A = np.array(A)
+	# if not (type(B) is np.ndarray):
+	# 	B = np.array(B)
+
+	A_flat = A.flatten()
+	B_flat = B.flatten()
+	# A_flat = A.reshape(-1)
+	# B_flat = B.reshape(-1)
+	# A_flat, B_flat = A, B
+	
+	# Placeholder for the results, using a list initially (will convert to array later)
+	result_flat = []
+	
+	# Process each interval in A
+	for i in range(0, len(A_flat), 2):
+		a_start, a_end = A_flat[i], A_flat[i+1]
+		current_intervals = [(a_start, a_end)]
+		
+		# Check against all intervals in B
+		for j in range(0, len(B_flat), 2):
+			b_start, b_end = B_flat[j], B_flat[j+1]
+			new_intervals = []
+			
+			for a_start, a_end in current_intervals:
+				# Check for overlap and adjust intervals accordingly
+				if b_start <= a_end and b_end >= a_start:
+					if a_start < b_start:
+						new_intervals.append((a_start, min(b_start, a_end)))
+					if a_end > b_end:
+						new_intervals.append((max(a_start, b_end), a_end))
+				else:
+					new_intervals.append((a_start, a_end))
+			current_intervals = new_intervals
+		
+		# Flatten the current_intervals for the result
+		for start, end in current_intervals:
+			result_flat.extend([start, end])
+	
+	# Convert the flat result list back to a 2D array
+	result = np.array(result_flat).reshape(-1, 2)
+	return result
+	
+
 def merge_intervals(intervals):
 	if not intervals:
 		return []
