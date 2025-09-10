@@ -2,12 +2,12 @@
 
 import numpy as np
 from leocat.utils.const import *
-from leocat.utils.geodesy import lla_to_ecf
+from leocat.utils.geodesy import lla_to_ecf, RADEC_to_cart
 from leocat.utils.math import matmul
 from leocat.utils.orbit import get_R_ECI_ECF_GMST
 
 
-def solar_elev(lon, lat, JD, R_ECI_ECF=None, positive=False, mean_sun=False):
+def solar_elev(lon, lat, JD, R_ECI_ECF=None, positive=False, mean_sun=False, spherical=False):
 
 	# single_value = 0
 	# if not (type(lon) is np.ndarray):
@@ -18,7 +18,11 @@ def solar_elev(lon, lat, JD, R_ECI_ECF=None, positive=False, mean_sun=False):
 	# 	if R_ECI_ECF is not None:
 	# 		R_ECI_ECF = np.array([R_ECI_ECF])
 
-	r_ecf = lla_to_ecf(lon, lat, np.zeros(lon.shape)) # km
+	if spherical:
+		r_ecf = RADEC_to_cart(lon, lat) # km
+	else:
+		r_ecf = lla_to_ecf(lon, lat, np.zeros(lon.shape)) # km
+		
 	if R_ECI_ECF is None:
 		R_ECI_ECF = get_R_ECI_ECF_GMST(JD)
 
