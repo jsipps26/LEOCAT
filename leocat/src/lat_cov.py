@@ -18,14 +18,19 @@ class LatitudeCoverage:
 	- Swath width technically unbounded but should likely 
 	remain within 10000 km.
 	- Nadir viewing, e.g. FOR
+	- Can likely make it 50% faster if you only proc
+	when split_solar=True, but then you must handle logic
+	for frac=0.0, 0.5, and 1.0 without bounds functions.
 
 	Error sources
 	- Exact num revs can bias soln
-	- Assume sun pos const over JD1/JD2 interval, increasing
+	- Assume sun pos const over dJD interval, increasing
 	error near terminator
 
-	Potential issue
-	Poles assume 360 deg. coverage... maybe slightly off?
+	Potential issues
+	- Poles assume 360 deg. coverage... maybe slightly off?
+	- Comparing to illum_frac, looks like get_series output
+	time off by dJD/2... but maybe not an issue
 
 	"""
 
@@ -195,7 +200,72 @@ class LatitudeCoverage:
 		return frac*num_obs
 
 
-	def get_series(self, JD1, JD2, elev=None, day=True, verbose=1):
+	def get_num_obs_true(self, elev=None, day=True, verbose=0):
+
+		from leocat.cov import AnalyticCoverage
+		from leocat.cov import get_num_obs, access_to_vector, vector_to_access
+		from leocat.utils.astro import solar_elev
+		from pandas import DataFrame
+
+		lat = self.lat
+		dJD = self.dJD
+		orb = self.orb
+		swath = self.swath
+
+		JD1_bt = self.JD1
+		JD2_bt = JD1_bt + dJD
+
+		lon = np.linspace(-180,180,len(lat))
+		xx, yy = np.meshgrid(lon,lat)
+		lon, lat = xx.flatten(), yy.flatten()
+
+		AC = AnalyticCoverage(orb, swath, lon, lat, JD1_bt, JD2_bt)
+		t_access = AC.get_access(verbose=verbose)
+
+		if elev is None:
+			num_obs = get_num_obs(t_access, len(lon))
+
+		else:
+			# day/night
+			t_vec, index_vec = access_to_vector(t_access)
+			lon_vec, lat_vec = lon[index_vec], lat[index_vec]
+			JD_vec = JD1_bt + t_vec/86400
+
+			# get_solar_day
+			# b = solar_elevation > elev_thres
+			# q_solar = b.astype(float)
+
+			# get_solar_night
+			# b = solar_elevation < elev_thres
+			# q_solar = b.astype(float)
+			solar_elevation = solar_elev(lon_vec, lat_vec, JD_vec, spherical=True)
+			if day:
+				b = solar_elevation > elev
+			else:
+				b = solar_elevation < elev
+			q_solar = b.astype(float)
+			q_access = vector_to_access(q_solar, index_vec)
+
+			num_obs = np.zeros(len(lon))
+			for i in range(len(lon)):
+				if not (i in t_access):
+					continue
+				t = t_access[i]
+				q = q_access[i]
+				num_obs[i] = np.sum(q)
+				# num_obs[i] = len(t)
+
+
+		df = DataFrame({'lat': lat, 'num_obs': num_obs})
+		df = df.groupby('lat').agg({'num_obs': 'mean'})
+		df = df.reset_index()
+		lat_uq = df['lat'].to_numpy()
+		num_obs_lat_true = df['num_obs'].to_numpy()
+
+		return num_obs_lat_true
+
+
+	def _get_series(self, JD1, JD2, elev=None, day=True, verbose=1, BT_true=False):
 		dJD = self.dJD
 		lat = self.lat
 		orb = self.orb
@@ -217,11 +287,28 @@ class LatitudeCoverage:
 		swath_lat = self.get_swath_lat(BT=True)
 		for i in iterator:
 			orb_prop.propagate_epoch(dJD_true*86400, reset_epoch=True)
-			LC = LatitudeCoverage(orb_prop, swath, lat, JD[i])
-			num_obs = LC.get_num_obs(elev=elev, day=day, swath_lat=swath_lat)
+			LC = LatitudeCoverage(orb_prop, swath, lat, JD[i], dJD=dJD_true)
+			if BT_true:
+				num_obs = LC.get_num_obs_true(elev=elev, day=day)
+			else:	
+				num_obs = LC.get_num_obs(elev=elev, day=day, swath_lat=swath_lat)
 			zz.append(factor*num_obs)
 		zz = np.array(zz)
 
+		return xx, yy, zz
+
+
+	def get_series_true(self, JD1, JD2, elev=None, day=True, verbose=1):
+		xx, yy, zz = self._get_series(JD1, JD2, elev=elev, day=day, 
+									verbose=verbose, BT_true=True)
+		#
+		return xx, yy, zz
+
+
+	def get_series(self, JD1, JD2, elev=None, day=True, verbose=1):
+		xx, yy, zz = self._get_series(JD1, JD2, elev=elev, day=day, 
+									verbose=verbose, BT_true=False)
+		#
 		return xx, yy, zz
 
 
@@ -232,6 +319,7 @@ class LatitudeCoverage:
 		z = np.tile(num_obs,len(lon))
 		zz = z.reshape(xx.shape)
 		return xx, yy, zz
+
 
 	def interp_lat(self, lat, num_obs):
 		lat_input = self.lat
