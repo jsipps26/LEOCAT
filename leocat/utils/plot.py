@@ -263,8 +263,8 @@ def add_plus_to_colorbar(fig, cbar):
 		cbar.ax.set_yticklabels(tick_labels)
 
 
-def plot_circles(ax, x, y, s=25, edgecolors='r', *args):
-	ax.scatter(x, y, s=s, facecolors='none', edgecolors=edgecolors, *args)
+def plot_circles(ax, x, y, s=25, edgecolors='r', label=None):
+	ax.scatter(x, y, s=s, facecolors='none', edgecolors=edgecolors, label=label)
 
 def plot_axes(ax, L=1.0, R=None, zorder=None):
 	if R is None:
