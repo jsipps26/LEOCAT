@@ -711,15 +711,25 @@ def draw_arc(ax, p1, p2, radius, offset=None, c=None, linestyle=None, label=None
 
 # 	make_gif_func(files, 1.0 / fps, os.path.join(OUT_DIR, '%s.gif' % name))
 
-def split_lon(lon):
-	idx = np.where(np.abs(np.diff(lon)) > 180)[0].astype(int)
-	split_index = []
-	i_prev = 0
-	for i in idx:
-		split_index.append(np.arange(i_prev,i))
-		i_prev = i
-	split_index.append(np.arange(i_prev+1,len(lon)))
-	return split_index
+def split_lon(lon, thres=300):
+	# thres should be greater than 180 but less than 360
+	jumps = np.abs(np.diff(lon)) > thres
+	segment_id = np.r_[0, np.cumsum(jumps)]
+	idx_split = []
+	for i in np.unique(segment_id):
+		idx = np.where(segment_id == i)[0]
+		idx_split.append(idx)
+	return idx_split
+	
+# def split_lon(lon):
+# 	idx = np.where(np.abs(np.diff(lon)) > 180)[0].astype(int)
+# 	split_index = []
+# 	i_prev = 0
+# 	for i in idx:
+# 		split_index.append(np.arange(i_prev,i))
+# 		i_prev = i
+# 	split_index.append(np.arange(i_prev+1,len(lon)))
+# 	return split_index
 
 
 def circular_edge(cam_vec, radius):
