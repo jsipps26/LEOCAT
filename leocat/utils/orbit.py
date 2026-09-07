@@ -1451,7 +1451,7 @@ def get_repeat_dlon(k_day2rep, k_rev2rep, deg=False):
 		return dlon_rev, dlon_pass
 		
 
-def Walker(walker_name,h,inc,P,F,e=0.00001,omega=0):
+def Walker(walker_name,h,inc,P,F,e=0.00001,omega=0,propagator='kepler'):
 	"""
 	# https://en.wikipedia.org/wiki/Satellite_constellation
 	walker_name - base name for walker constellation
@@ -1478,7 +1478,7 @@ def Walker(walker_name,h,inc,P,F,e=0.00001,omega=0):
 			nu = dnu*j
 			orbit_params = {'a': R_earth + h, 'e': e, 'inc': inc, 'LAN': LAN, 'omega': omega, 'nu': nu,
 						'name': name, 'DIR': None, 'propagator': 'kepler', 'epoch': None,
-						'k_rev2rep': None, 'k_day2rep': None, 'sso': None}
+						'R': None, 'D': None, 'sso': None}
 			#
 			# key = np.round(LAN,2),np.round(nu,2)
 			# orbit_params_walker[key] = orbit_params

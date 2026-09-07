@@ -14,6 +14,38 @@ from copy import deepcopy
 from tqdm import tqdm
 
 
+def WalkerDelta(P, F):
+	"""
+	Get longitude and true anomaly spacing for
+	the WalkerDelta constellation.
+		To be used in conjunction with ConstellationShell
+		i.e. LAN_shifts and nu_shifts are inputs to create
+		a ConstellationShell
+
+	P - number of equally spaced planes
+	F - number of satellites per plane
+
+	"""
+	dLAN = 360.0/P
+	dnu = 360.0/F
+	LANs = []
+	nus = []
+	for i in range(P):
+		for j in range(F):
+			LAN = dLAN*i
+			nu = dnu*j
+			LANs.append(LAN)
+			nus.append(nu)
+	LANs = np.array(LANs)
+	nus = np.array(nus)
+
+	LAN_shifts = (LANs-LANs[0])[1:]
+	nu_shifts = (nus-nus[0])[1:]
+
+	return LAN_shifts, nu_shifts
+
+
+
 class ConstellationShell:
 
 	def __init__(self, orb, swath, JD1, JD2, LAN_shifts=[], nu_shifts=[]):
