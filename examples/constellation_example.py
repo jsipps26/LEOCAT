@@ -37,6 +37,7 @@ will diverge and change over time.
 Process
 1. Make a "template" orbit that specifies altitude,
 inclination, equatorial crossing (for SSO), etc.
+	or others: LEO, LEO_SSO, LEO_RGT, etc.
 2. Find the shifts that other satellites will require
 to make a Walker Delta constellation
 	Shifts in LAN and nu

@@ -3,7 +3,7 @@
 import numpy as np
 from pyproj import Proj, Transformer
 from leocat.utils.math import dot, unit, mag
-from leocat.utils.index import hash_index
+from leocat.utils.index import hash_index, hash_cr_DGG
 
 ecf = Proj(proj='geocent', ellps='WGS84', datum='WGS84')
 lla = Proj(proj='latlong', ellps='WGS84', datum='WGS84')
@@ -209,6 +209,15 @@ class DiscreteGlobalGrid:
 		return lon, lat
 
 
+	def get_poly_grid(self, lon, lat):
+		# lon and lat should be on the DGG
+		cols, rows = hash_cr_DGG(lon, lat, self)
+		DGG_params = self.get_params()
+		dlon = DGG_params['dlon'][rows]
+		dlat = DGG_params['dlat']
+		poly_grid = poly_grid_cell_map(lon, lat, dlon, dlat, N_side=1)
+		return poly_grid
+
 
 
 def lonlat_to_grid(lon_target0, lat_target0, DGG):
@@ -256,7 +265,7 @@ def poly_grid_cell_map(x_GP, y_GP, res_x, res_y, N_side=1):
 		# poly_ecef0 = np.transpose([poly_ecef0[0],poly_ecef0[1],poly_ecef0[2]])
 		# poly_ecef.append(poly_ecef0)
 
-	return poly_grid
+	return np.array(poly_grid)
 
 
 def poly_grid_cell(x0,y0,res_x,res_y,N_side=10):

@@ -7,7 +7,7 @@ from leocat.utils.index import hash_cr_DGG, hash_xy_DGG, unique_2d
 from leocat.utils.orbit import convert_ECI_ECF, get_R_ECI_ECF_GMST
 
 from pyproj import CRS, Transformer
-from leocat.utils.geodesy import DiscreteGlobalGrid
+from leocat.utils.geodesy import DiscreteGlobalGrid, lla_to_ecf
 
 from copy import deepcopy
 
@@ -507,9 +507,21 @@ class Satellite:
 			R_LVLH = R_LVLH_ECI
 		return R_LVLH
 
-	def get_access(self, r0, R):
+	def get_access(self, r0, R, representation='ecf'):
 		space_params = self.space_params
-		return self.Inst.get_access(r0, R, space_params)
+		DGG = space_params['DGG']
+		cr = self.Inst.get_access(r0, R, space_params)
+		representation = representation.lower()
+		if representation == 'cr':
+			return cr
+
+		x, y = hash_xy_DGG(cr.T[0], cr.T[1], DGG)
+		if representation == 'lla':
+			return x, y
+		elif representation == 'ecef' or representation == 'ecf':
+			r_GP = lla_to_ecf(x, y, np.zeros(x.shape))
+
+		return r_GP
 
 	def get_R_LVLH(self, r_eci, v_eci):
 		r_hat = unit(r_eci)

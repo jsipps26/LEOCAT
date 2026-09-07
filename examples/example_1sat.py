@@ -18,6 +18,7 @@ a 1600 km swath width.
 
 Process
 1. Make the orbit via LEO_RGT_SSO function
+	or others: LEO, LEO_SSO, LEO_RGT, etc.
 2. Set the simulation period, swath size, and spatial
 	grid resolution
 3. Compute coverage via get_coverage
