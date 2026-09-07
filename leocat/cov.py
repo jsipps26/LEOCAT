@@ -124,8 +124,9 @@ def combine_coverage(lons, lats, t_access_list, DGG):
 	return lon_total, lat_total, t_access_total
 
 
-def get_coverage(orb, swath, JD1, JD2, verbose=2, res=None, alpha=0.25, lon=None, lat=None):
-
+def get_coverage(orb, swath, JD1, JD2, verbose=2, res=None, 
+				alpha=0.25, lon=None, lat=None, accuracy=2):
+	#
 	"""
 	This function simplifies coverage calculation to a single routine,
 	assuming nadir-pointing observation. Grid resolution is assumed 
@@ -226,7 +227,7 @@ def get_coverage(orb, swath, JD1, JD2, verbose=2, res=None, alpha=0.25, lon=None
 	phi_c = np.arctan((R_earth_pole/R_earth)**2 * np.tan(phi))
 	lat_c = np.degrees(phi_c)
 	AC = AnalyticCoverage(orb, swath, lon, lat_c, JD1, JD2)
-	t_access = AC.get_access(verbose=verbose, accuracy=2)
+	t_access = AC.get_access(verbose=verbose, accuracy=accuracy)
 
 
 	return lon, lat, t_access
