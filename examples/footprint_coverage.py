@@ -15,6 +15,8 @@ from leocat.cov import Satellite, Instrument
 from leocat.utils.math import unit
 from leocat.utils.geodesy import lla_to_ecf, cart_to_RADEC
 
+
+
 """
 Work-in-progress (WIP) suite
 
@@ -22,7 +24,7 @@ This example demonstrates the usage of Satellite and
 Instrument objects to determine instantaneous coverage,
 of a satellite that is rolling +/-10 deg. off-nadir in
 the cross-track (CT) direction, with a large rectangular
-field-of-view (FOV). Satellite/Instrument classes constrast
+field-of-view (FOV). Satellite/Instrument classes contrast
 the rest of LEOCAT, which is dedicated to estimating
 regional coverage over days, months, and years.
 

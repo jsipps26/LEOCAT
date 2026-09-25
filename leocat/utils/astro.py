@@ -4,10 +4,17 @@ import numpy as np
 from leocat.utils.const import *
 from leocat.utils.geodesy import lla_to_ecf, RADEC_to_cart
 from leocat.utils.math import matmul
-from leocat.utils.orbit import get_R_ECI_ECF_GMST
+# from leocat.utils.orbit import get_R_ECI_ECF_GMST
 
+"""
+Reference
+Vallado, D., "Fundamentals of Astrodynamics and Applications", version 4
+
+"""
 
 def solar_elev(lon, lat, JD, R_ECI_ECF=None, positive=False, mean_sun=False, spherical=False):
+
+	from leocat.utils.orbit import get_R_ECI_ECF_GMST
 
 	# single_value = 0
 	# if not (type(lon) is np.ndarray):
@@ -119,6 +126,7 @@ def lunar_elev(lon, lat, JD, R_ECI_ECF=None, positive=False, relative=True):
 	# 	JD = np.array([JD])
 	# 	if R_ECI_ECF is not None:
 	# 		R_ECI_ECF = np.array([R_ECI_ECF])
+	from leocat.utils.orbit import get_R_ECI_ECF_GMST
 
 	r_ecf = lla_to_ecf(lon, lat, np.zeros(lon.shape)) # km
 	if R_ECI_ECF is None:

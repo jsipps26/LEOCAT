@@ -5,10 +5,11 @@ from leocat.fqs.fqs import single_cubic, single_quartic
 from numba import njit
 
 from leocat.utils.const import *
-from leocat.utils.orbit import surface_illumination_approx, surface_illumination, \
+from leocat.utils.astro import surface_illumination_approx, surface_illumination, \
 								solar_pos_approx, lunar_pos_approx, lunar_phase, \
-								get_lunar_p, get_LAN_dot
+								get_lunar_p
 #
+from leocat.utils.orbit import get_LAN_dot
 from leocat.utils.math import R1, R3, R3, unit, mag, matmul, dot
 
 elev_threshold_solar0 = -18.0
@@ -894,7 +895,7 @@ def lat_band_to_M_bounds(lat_band, inc, omega, invert=False):
 def get_illum(r_ecf, JD, N_orb, JD1, dJD, body='sun'):
 
 	from leocat.utils.geodesy import ecf_to_lla
-	from leocat.utils.orbit import solar_elev, lunar_elev
+	from leocat.utils.astro import solar_elev, lunar_elev
 	from leocat.utils.index import hash_index
 	import pandas as pd
 

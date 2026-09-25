@@ -32,7 +32,8 @@ circular and all are at the same altitude. In practice,
 constellations are only realizable when all satellites 
 remain at a specific set of orbital elements such that
 precession is constant between each - otherwise phasing 
-will diverge and change over time.
+will be inconsistent and the constellation will change 
+over time.
 
 Process
 1. Make a "template" orbit that specifies altitude,
